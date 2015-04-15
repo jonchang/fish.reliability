@@ -38,7 +38,7 @@ manuscript_cache/*
 manuscript_files/*
 
 ## Rmarkdown output files
-*.docx
-*.html
-*.pdf
-*.tex
+manuscript.docx
+manuscript.html
+manuscript.pdf
+manuscript.tex
