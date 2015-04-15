@@ -1,4 +1,5 @@
 sudo: required
 language: r
+r_github_packages: rstudio/rmarkdown
 script:
     - Rscript -e 'rmarkdown::render("manuscripts/manuscript.Rmd")'
