@@ -32,3 +32,13 @@
 *.synctex.gz
 *.synctex.gz(busy)
 *.pdfsync
+
+## Rmarkdown intermediate files
+manuscript_cache/*
+manuscript_files/*
+
+## Rmarkdown output files
+*.docx
+*.html
+*.pdf
+*.tex
