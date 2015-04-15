@@ -1,3 +1,4 @@
+sudo: required
 language: r
 script:
     - Rscript -e 'rmarkdown::render("manuscripts/manuscript.Rmd")'
