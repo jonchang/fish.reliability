@@ -197,6 +197,7 @@ mads <- pcaed %>% group_by(family, role, mark) %>% summarise(mad=mad(PC1)) %>% u
 all_stats <- bind_rows(meds, mads) %>% spread(stat, value)
 ```
 
+<!--
 ```{r geomorph_lm, cache=TRUE}
 fmted <- format_for_gpagen(no_st)
 allsplit <- str_split_fixed(dimnames(fmted)$id, "_", 3)
@@ -211,7 +212,7 @@ ind_only <- procD.lm(gpaed$coords ~ family_vec:ind_vec, iter=999, RRPP=T)
 
 advanced.procD.lm(gpaed$coords ~ ind_vec,  ~ role_vec * ind_vec, ~ family_vec, iter=499)
 ```
-
+-->
 
 <!--
 ```{r median_tbl, echo=F, results="asis", anchor="table", fig.cap="Median table"}
