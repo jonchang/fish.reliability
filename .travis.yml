@@ -19,7 +19,8 @@ r_binary_packages:
     - knitcitations
     - ggplot2
     - stringr
-#before_script:
+before_script:
+    - sudo apt-get install texlive-xetex
 #    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
 #    - tar -xvf v2.3.0.tar.gz
 #    - cd bamm-2.3.0 && mkdir build && cd build && cmake .. && make -j && sudo make install
