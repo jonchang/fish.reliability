@@ -3,8 +3,6 @@ language: r
 r_github_packages:
     - rstudio/rmarkdown
     - hadley/readr
-    - hadley/ggplot2
-    - hadley/stringr
     - mkoohafkan/kfigr
 r_binary_packages:
     - magrittr
@@ -19,6 +17,8 @@ r_binary_packages:
     - directlabels
     - BAMMtools
     - knitcitations
+    - ggplot2
+    - stringr
 #before_script:
 #    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
 #    - tar -xvf v2.3.0.tar.gz
