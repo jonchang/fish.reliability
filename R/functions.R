@@ -33,6 +33,7 @@ format_for_gpagen <- function(df) {
 
 #' Hack the shit out of geomorph's slow procD.lm function
 #' @export
+#' @import geomorph
 my.procD.lm <- function (f1, iter = 999, RRPP = FALSE, int.first = FALSE, verbose = FALSE)
 {
   form.in <- formula(f1)
