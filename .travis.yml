@@ -20,4 +20,5 @@ r_binary_packages:
     - BAMMtools
     - knitcitations
 script:
+    - R CMD INSTALL .
     - Rscript -e 'rmarkdown::render("manuscript/manuscript.Rmd")'
