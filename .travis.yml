@@ -5,12 +5,12 @@ r_github_packages:
     - hadley/readr
     - hadley/ggplot2
     - hadley/stringr
+    - mkoohafkan/kfigr
 r_binary_packages:
     - magrittr
     - tidyr
     - reshape2
     - scales
-    - grid
     - geomorph
     - rjson
     - ipred
