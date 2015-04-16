@@ -3,5 +3,22 @@ language: r
 r_github_packages:
     - rstudio/rmarkdown
     - hadley/readr
+    - hadley/ggplot2
+    - hadley/stringr
+r_binary_packages:
+    - magrittr
+    - tidyr
+    - reshape2
+    - scales
+    - grid
+    - geomorph
+    - rjson
+    - ipred
+    - vegan
+    - lubridate
+    - directlabels
+    - BAMMtools
+    - knitcitations
+    - kfigr
 script:
     - Rscript -e 'rmarkdown::render("manuscript/manuscript.Rmd")'
