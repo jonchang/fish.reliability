@@ -9,7 +9,7 @@ author:
 - affiliation: ucla
   name: Michael E. Alfaro
 bibliography:
-- ../../../Mendeley/library.bib
+- library.bib
 - knitcitations.bib
 output:
   pdf_document:
@@ -407,5 +407,7 @@ real_plot_tangent_space(coords, "PC5", "PC6")
 
 ```{r knitcitations_write, echo=FALSE, message=FALSE}
 write.bibtex(file="knitcitations.bib")
+# Also download Mendeley bibliography
+download.file("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=0", destfile="library.bib", method="curl", extra="-L")
 ```
 
