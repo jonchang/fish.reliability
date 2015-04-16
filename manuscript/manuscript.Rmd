@@ -9,7 +9,7 @@ author:
 - affiliation: ucla
   name: Michael E. Alfaro
 bibliography:
-- ../../Mendeley/library.bib
+- ../../../Mendeley/library.bib
 - knitcitations.bib
 output:
   pdf_document:
