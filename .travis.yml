@@ -2,6 +2,6 @@ sudo: required
 language: r
 r_github_packages:
     - rstudio/rmarkdown
-    - hadley/reader
+    - hadley/readr
 script:
     - Rscript -e 'rmarkdown::render("manuscript/manuscript.Rmd")'
