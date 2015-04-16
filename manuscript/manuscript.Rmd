@@ -59,6 +59,7 @@ library("fish.reliability")
 options("citation_format"="pandoc")
 cleanbib()
 set.seed(111) # reproducible and stable sampling
+data(fish_landmarks)
 ```
 
 <!--
@@ -185,14 +186,13 @@ State the results, drawing attention to important details in tables and figures
 ## Reliability analysis
 
 ```{r sum_table}
-anon_csv <- read_csv("anon.csv")
-no_st <- anon_csv %>% filter(role != "student") %>% mutate(role=factor(role), mark=factor(mark), Family = str_replace(fn, "(.{3}).*", "\\1")) %>% select(-fn)
+no_st <- fish_landmarks %>% filter(role != "student")
 
-pcaed <- no_st %>% group_by(Family, mark) %>% do(as_df(prcomp(cbind(.$x, .$y), scale=F, center=T)$x, role=as.character(.$role), ident=as.character(.$sha1mac))) %>% mutate(PC1 = as.numeric(PC1), PC2 = as.numeric(PC2))
+pcaed <- no_st %>% group_by(family, mark) %>% do(as_df(prcomp(cbind(.$x, .$y), scale=F, center=T)$x, role=as.character(.$role), ident=as.character(.$sha1mac))) %>% mutate(PC1 = as.numeric(PC1), PC2 = as.numeric(PC2))
 
-meds <- pcaed %>% group_by(Family, role, mark) %>% summarise(med=median(PC1)) %>% ungroup() %>% spread(role, med) %>% transmute(Family, mark, value = log(abs(turker - morphologist)), stat="median")
+meds <- pcaed %>% group_by(family, role, mark) %>% summarise(med=median(PC1)) %>% ungroup() %>% spread(role, med) %>% transmute(family, mark, value = log(abs(turker - morphologist)), stat="median")
 
-mads <- pcaed %>% group_by(Family, role, mark) %>% summarise(mad=mad(PC1)) %>% ungroup() %>% spread(role, mad) %>% transmute(Family, mark, value = log(turker / morphologist), stat="mad")
+mads <- pcaed %>% group_by(family, role, mark) %>% summarise(mad=mad(PC1)) %>% ungroup() %>% spread(role, mad) %>% transmute(family, mark, value = log(turker / morphologist), stat="mad")
 
 all_stats <- bind_rows(meds, mads) %>% spread(stat, value)
 ```
@@ -215,12 +215,12 @@ advanced.procD.lm(gpaed$coords ~ ind_vec,  ~ role_vec * ind_vec, ~ family_vec, i
 
 <!--
 ```{r median_tbl, echo=F, results="asis", anchor="table", fig.cap="Median table"}
-med_wide <- meds %>% spread(key=Family, value=value)
+med_wide <- meds %>% spread(key=family, value=value)
 med_wide %>% knitr::kable(digits = 2, caption = "Median table")
 ```
 
 ```{r mad_tbl, echo=F, results="asis", anchor="table", fig.cap="MAD table"}
-mad_wide <- mads %>% spread(key=Family, value=value)
+mad_wide <- mads %>% spread(key=family, value=value)
 mad_wide %>% knitr::kable(digits = 2, caption="MAD table")
 ```
 -->
@@ -238,20 +238,20 @@ The most accurate and precise points are those that are related to the position 
 
 ```{r cv_table, echo=F, results="asis", anchor="table", message=FALSE}
 
-subsamp <- group_by(no_st, fn, role) %>% sample_n(size=400) %>% ungroup()
+subsamp <- group_by(no_st, family, role) %>% sample_n(size=400) %>% ungroup()
 
-CV <- subsamp %>% group_by(fn) %>% do(estimator = errorest(role ~ mark:x + mark:y, data=., model=lda, estimator="cv", est.para = control.errorest(k=10), predict=ip.lda))
+CV <- subsamp %>% group_by(family) %>% do(estimator = errorest(role ~ mark:x + mark:y, data=., model=lda, estimator="cv", est.para = control.errorest(k=10), predict=ip.lda))
 
-CV_sum <- CV %>% summarise(fn=fn, error=estimator[["error"]]) %>% separate("fn", "fn", sep="_", extra="drop")
+CV_sum <- CV %>% summarise(family=family, error=estimator[["error"]]) %>% separate("family", "family", sep="_", extra="drop")
 
-CV <- subsamp %>% group_by(fn) %>% do(estimator = errorest(role ~ mark:x + mark:y, data=., model=qda, estimator="cv", est.para = control.errorest(k=10), predict=ip.lda))
+CV <- subsamp %>% group_by(family) %>% do(estimator = errorest(role ~ mark:x + mark:y, data=., model=qda, estimator="cv", est.para = control.errorest(k=10), predict=ip.lda))
 
-CV_sum2 <- CV %>% summarise(fn=fn, qda_error=estimator[["error"]]) %>% separate("fn", "fn", sep="_", extra="drop")
+CV_sum2 <- CV %>% summarise(family=family, qda_error=estimator[["error"]]) %>% separate("family", "family", sep="_", extra="drop")
 
 CV_sum <- left_join(CV_sum, CV_sum2)
 
 # format for display
-CV_sum %>% transmute(`Family`=fn, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
+CV_sum %>% transmute(`Family`=family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
 ```
 
 Both linear and quadratic discriminant analysis with 10-fold cross validation (Table `r figr("cv_table")`) was unable to reliably distinguish between morphologists and crowdsourced workers using our acceptable misprediction threshold of 20%. 
@@ -259,14 +259,13 @@ Both linear and quadratic discriminant analysis with 10-fold cross validation (T
 ```{r turk_morph_procrustes_space, echo=FALSE, fig.cap="Hello", fig.keep="last", anchor="figure", message=FALSE}
 
 # Load data from the anonymized results file, remove students, drop bad marks
-df <- read_csv("anon.csv") %>%
+df <- fish_landmarks %>%
 	filter(role != "student") %>% 
 	separate(col=mark, into=c("cat", "cat_seq"), sep=1, remove=F, convert=T) %>%
-	mutate(round=floor(sequence/5), fn=factor(str_extract(fn, ".{8}"))) %>%
-	filter(!(fn %in% c("Balistid") & mark %in% c("D1","D2")), !mark %in% c("O1","O2","O3","O4","O5", "A3", "D3", "D4"))
+	filter(!(family %in% c("Bal") & mark %in% c("D1","D2")), !mark %in% c("O1","O2","O3","O4","O5", "A3", "D3", "D4"))
 
 # grabs the consensus sequence by person and fish
-df <- df %>% group_by(fn, mark, role, sha1mac) %>% summarise(x=median(x), y=median(y))
+df <- df %>% group_by(family, mark, role, sha1mac) %>% summarise(x=median(x), y=median(y))
 
 coords <- gpagen(format_for_gpagen(df), ShowPlot=F)$coords
 
@@ -278,15 +277,15 @@ real_plot_tangent_space <- function(coords, axis1="PC1", axis2="PC2") {
   
 	res <- as.data.frame(pcdata)
 	res$id <- rownames(res)
-	res2 <- res %>% separate(id, into=c("fn", "role","sha"), sep="_") %>% tbl_df()
+	res2 <- res %>% separate(id, into=c("family", "role","sha"), sep="_") %>% tbl_df()
 
 	# consensus in Procrustes space for downstream highlighting
 	dots <- list(
 		x=lazyeval::interp(~median(axis1, na.rm=T), axis1=as.name(axis1)),
 		y=lazyeval::interp(~median(axis2, na.rm=T), axis2=as.name(axis2)))
-	consensus <- res2 %>% group_by(fn, role) %>% summarise_(.dots=dots)
+	consensus <- res2 %>% group_by(family, role) %>% summarise_(.dots=dots)
 
-	p <- ggplot(res2, aes_string(axis1, axis2, group="fn")) + geom_point(aes(col=fn, shape=role)) + geom_point(aes(x, y), data=consensus, alpha=0.5, size=5, col="black") + geom_point(aes(x, y, col=fn, shape=role), data=consensus) + stat_ellipse(aes(color=fn), linetype=2, type="norm", level=0.95) + theme_minimal() + theme(legend.position="none")
+	p <- ggplot(res2, aes_string(axis1, axis2, group="family")) + geom_point(aes(col=family, shape=role)) + geom_point(aes(x, y), data=consensus, alpha=0.5, size=5, col="black") + geom_point(aes(x, y, col=family, shape=role), data=consensus) + stat_ellipse(aes(color=family), linetype=2, type="norm", level=0.95) + theme_minimal() + theme(legend.position="none")
 
 	direct.label(p, method="smart.grid")
 }
@@ -370,7 +369,7 @@ Previous work in generating large phenotypic datasets typically relied on one or
 Collecting phenotypic data remains a large bottleneck in our ability to comprehensively test hypotheses about large radiations of organisms. We developed a method to gather phenotypic data using Amazon Mechanical Turk.
 Our results show that the quality of turkers' data are not significantly different from results collected from experts, and that these data can be gathered extremely quickly.
 
-We attempted to distinguish between turker-generated landmarks and expert-generated landmarks using linear discriminant analysis. Even the image with the lowest misprediction rate, from the family `r filter(CV_sum, min(error) == error)$fn`, still incorrectly predicted the digitizer's identity `r filter(CV_sum, min(error) == error)$error %>% as.numeric() %>% scales::percent()` of the time, suggesting that, given a set of landmarks, it is difficult to predict whether a turker or a morphologist created them. The quadratic discriminant analysis did not reliably improve prediction of worker identity over the LDA.
+We attempted to distinguish between turker-generated landmarks and expert-generated landmarks using linear discriminant analysis. Even the image with the lowest misprediction rate, from the family `r filter(CV_sum, min(error) == error)$family`, still incorrectly predicted the digitizer's identity `r filter(CV_sum, min(error) == error)$error %>% as.numeric() %>% scales::percent()` of the time, suggesting that, given a set of landmarks, it is difficult to predict whether a turker or a morphologist created them. The quadratic discriminant analysis did not reliably improve prediction of worker identity over the LDA.
 
 The traditional way of collecting phenotypic data involves enormous researcher effort and significant morphological expertise. For example, @Brusatte2014 used a 853 character discrete character matrix for 150 taxa to estimate the rate of morphological evolution in the transition from theropod dinosaurs to modern birds. These data were collected over the course of 20 years as part of the Therapod Working Group [@Norell2001; @Clark2002; @Hwang2002; @Hwang2004; @Makovicky2005; @Norell2006; @Turner2007; @Turner2012; @dryad_84t75]. @OLeary2013 combined the work of MorphoBank contributors [@OLeary2011] with literature review to generate 4,541 characters for 86 species. @Rabosky2013 examined 7,822 species of ray-finned fish but used a single quantitative measure (body size) to evaluate correlated speciation and morphological evolution. Newer approaches, typically involving statistical techniques such as machine vision or natural language processing, still require significant researcher expertise in either gathering large training datasets, or to develop new and more sophisticated machine learning models [@Brill2003; @Halevy2009].
 

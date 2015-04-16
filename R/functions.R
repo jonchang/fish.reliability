@@ -26,7 +26,7 @@ ip.lda <- function(object, newdata) {
 #' @importFrom magrittr %>%
 #' @export
 format_for_gpagen <- function(df) {
-  splut <- gather(df, variable, val, x:y) %>% unite(col=id, Family, role, sha1mac)
+  splut <- gather(df, variable, val, x:y) %>% unite(col=id, family, role, sha1mac)
   xtabs(val ~ mark + variable + id, data=splut)
 }
 
