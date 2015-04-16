@@ -19,10 +19,10 @@ r_binary_packages:
     - directlabels
     - BAMMtools
     - knitcitations
-before_script:
-    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
-    - tar -xvf v2.3.0.tar.gz
-    - cd bamm-2.3.0 && mkdir build && cd build && cmake .. && make -j && sudo make install
+#before_script:
+#    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
+#    - tar -xvf v2.3.0.tar.gz
+#    - cd bamm-2.3.0 && mkdir build && cd build && cmake .. && make -j && sudo make install
 script:
     - R CMD INSTALL .
     - Rscript -e 'rmarkdown::render("manuscript/manuscript.Rmd")'
