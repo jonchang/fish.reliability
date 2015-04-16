@@ -186,7 +186,7 @@ State the results, drawing attention to important details in tables and figures
 ## Reliability analysis
 
 ```{r sum_table}
-no_st <- fish_landmarks %>% filter(role != "student")
+no_st <- fish_landmarks %>% filter(role != "student") %>% mutate(role = factor(role))
 
 pcaed <- no_st %>% group_by(family, mark) %>% do(as_df(prcomp(cbind(.$x, .$y), scale=F, center=T)$x, role=as.character(.$role), ident=as.character(.$sha1mac))) %>% mutate(PC1 = as.numeric(PC1), PC2 = as.numeric(PC2))
 
@@ -197,7 +197,7 @@ mads <- pcaed %>% group_by(family, role, mark) %>% summarise(mad=mad(PC1)) %>% u
 all_stats <- bind_rows(meds, mads) %>% spread(stat, value)
 ```
 
-```{r geomorph_lm}
+```{r geomorph_lm, cache=TRUE}
 fmted <- format_for_gpagen(no_st)
 allsplit <- str_split_fixed(dimnames(fmted)$id, "_", 3)
 family_vec <- allsplit[, 1]
@@ -225,7 +225,7 @@ mad_wide %>% knitr::kable(digits = 2, caption="MAD table")
 ```
 -->
 
-```{r turker_v_expert} 
+```{r turker_v_expert, anchor="figure"} 
 ggplot(all_stats, aes(median, mad, label=mark)) + geom_text() + labs(x="Accuracy", y="Precision")
 ```
 
@@ -383,7 +383,7 @@ We stress that our work does not attempt to, and will likely never displace trad
 
 # Acknowledgements
 
-We thank XXX, YYY, and ZZZ for helpful comments on the manuscript, as well as Tina Marcroft, Bruno Frédérich, Vanson Liu, Rosalia Aguilar, Ryan Ellingson, Francesco Pickens, Colette LaRochelle, and the `r (no_st %>% filter(role == "turker") %>% distinct(sha1mac) %>% nrow()) + (results %>% select(workerid) %>% distinct() %>% nrow()) ` Amazon Mechanical Turk workers that contributed their time and effort. We also thank Dan Rabosky, Brian Sidlauskas, Matthew McGee, Adam Summers, and Michael Burns for insightful discussions about fish morphology and digitization protocols. Katie Staab, Tonya Kane, and their `r anon_csv %>% filter(role == "student") %>% distinct(sha1mac) %>% nrow()` undergraduate students served as beta testers for the methods in this study. This work was supported by an Encyclopedia of Life David M. Rubenstein Fellowship (EOL-33066-13), a Stephen and Ruth Wainwright Fellowship, and a UCLA Research and Conference Award to JC. (XXX: Mike's grants?). Travel support to present this research was also provided by the Society for Study of Evolution to JC.
+We thank XXX, YYY, and ZZZ for helpful comments on the manuscript, as well as Tina Marcroft, Bruno Frédérich, Vanson Liu, Rosalia Aguilar, Ryan Ellingson, Francesco Pickens, Colette LaRochelle, and the `r (no_st %>% filter(role == "turker") %>% distinct(sha1mac) %>% nrow()) + (results %>% select(workerid) %>% distinct() %>% nrow()) ` Amazon Mechanical Turk workers that contributed their time and effort. We also thank Dan Rabosky, Brian Sidlauskas, Matthew McGee, Adam Summers, and Michael Burns for insightful discussions about fish morphology and digitization protocols. Katie Staab, Tonya Kane, and their `r fish_landmarks %>% filter(role == "student") %>% distinct(sha1mac) %>% nrow()` undergraduate students served as beta testers for the methods in this study. This work was supported by an Encyclopedia of Life David M. Rubenstein Fellowship (EOL-33066-13), a Stephen and Ruth Wainwright Fellowship, and a UCLA Research and Conference Award to JC. (XXX: Mike's grants?). Travel support to present this research was also provided by the Society for Study of Evolution to JC.
 
 ## Author contributions
 
