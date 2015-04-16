@@ -197,8 +197,7 @@ mads <- pcaed %>% group_by(family, role, mark) %>% summarise(mad=mad(PC1)) %>% u
 all_stats <- bind_rows(meds, mads) %>% spread(stat, value)
 ```
 
-<!--
-```{r geomorph_lm, cache=TRUE}
+```{r geomorph_lm, eval=FALSE, cache=TRUE}
 fmted <- format_for_gpagen(no_st)
 allsplit <- str_split_fixed(dimnames(fmted)$id, "_", 3)
 family_vec <- allsplit[, 1]
@@ -212,9 +211,8 @@ ind_only <- procD.lm(gpaed$coords ~ family_vec:ind_vec, iter=999, RRPP=T)
 
 advanced.procD.lm(gpaed$coords ~ ind_vec,  ~ role_vec * ind_vec, ~ family_vec, iter=499)
 ```
--->
 
-<!--
+
 ```{r median_tbl, echo=F, results="asis", anchor="table", fig.cap="Median table"}
 med_wide <- meds %>% spread(key=family, value=value)
 med_wide %>% knitr::kable(digits = 2, caption = "Median table")
@@ -224,7 +222,7 @@ med_wide %>% knitr::kable(digits = 2, caption = "Median table")
 mad_wide <- mads %>% spread(key=family, value=value)
 mad_wide %>% knitr::kable(digits = 2, caption="MAD table")
 ```
--->
+
 
 ```{r turker_v_expert, anchor="figure"} 
 ggplot(all_stats, aes(median, mad, label=mark)) + geom_text() + labs(x="Accuracy", y="Precision")
