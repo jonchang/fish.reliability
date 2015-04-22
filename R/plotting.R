@@ -16,7 +16,7 @@ plot_tangent_space <- function(coords, axis1="PC1", axis2="PC2") {
 
   res <- as.data.frame(pcdata)
   res$id <- rownames(res)
-  res2 <- res %>% tidyr::separate(id, into=c("family", "role","sha"), sep="_") %>% left_join(full_family, by="family")
+  res2 <- res %>% tidyr::separate(id, into=c("family", "role","sha"), sep="_")
 
   # consensus in Procrustes space for downstream highlighting
   dots <- list(
