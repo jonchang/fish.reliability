@@ -400,6 +400,7 @@ real_plot_tangent_space(coords, "PC5", "PC6")
 ```{r knitcitations_write, echo=FALSE, message=FALSE}
 write.bibtex(file="knitcitations.bib")
 # Also download Mendeley bibliography
-download.file("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=0", destfile="library.bib", method="curl", extra="-L")
+mendbib <- RCurl::getURL("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=1", .opts=RCurl::curlOptions(followlocation=TRUE))
+cat(mendbib, file="library.bib")
 ```
 

@@ -8,7 +8,8 @@ Imports:
     magrittr,
     tidyr,
     geomorph,
-    RCurl
-Depends: R (>= 3.1.3)
+    RCurl,
+    lazyeval
+Depends: R (>= 3.2.0)
 License: AGPL
 LazyData: true
