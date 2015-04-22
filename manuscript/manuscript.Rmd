@@ -32,7 +32,7 @@ address:
 - address: |
     Department of Ecology and Evolutionary Biology, University of California, Los Angeles, CA, USA
   code: ucla
-word_count: 6000?
+word_count: 5000?
 ---
 
 ```{r prelude, echo=FALSE, message=FALSE, warning=FALSE}
@@ -61,6 +61,7 @@ cleanbib()
 set.seed(111) # reproducible and stable sampling
 data(fish_landmarks)
 data(fish_families)
+knitr::opts_chunk$set(echo=FALSE, cache=1)
 ```
 
 <!--
@@ -186,37 +187,19 @@ State the results, drawing attention to important details in tables and figures
 
 ## Reliability analysis
 
-```{r sum_table, echo=FALSE}
+```{r sum_table}
 no_st <- fish_landmarks %>% filter(role != "student") %>% mutate(role = factor(role))
 
 pcaed <- no_st %>% group_by(family, mark) %>% do(as_df(prcomp(cbind(.$x, .$y), scale=F, center=T)$x, role=as.character(.$role), ident=as.character(.$sha1mac))) %>% mutate(PC1 = as.numeric(PC1), PC2 = as.numeric(PC2))
 
-meds <- pcaed %>% group_by(family, role, mark) %>%
-  summarise(med=median(PC1)) %>%
-  ungroup() %>%
-  spread(role, med) %>%
-  transmute(family, mark, value = (abs(turker - morphologist)), stat="median")
+meds <- pcaed %>% group_by(family, role, mark) %>% summarise(med=median(PC1)) %>% ungroup() %>% spread(role, med) %>% transmute(family, mark, value = log(abs(turker - morphologist)), stat="median")
 
 mads <- pcaed %>% group_by(family, role, mark) %>% summarise(mad=mad(PC1)) %>% ungroup() %>% spread(role, mad) %>% transmute(family, mark, value = log(turker / morphologist), stat="mad")
 
-all_stats <- bind_rows(meds, mads) %>% spread(stat, value) %>% group_by(family) %>% mutate(lowerq=quantile(median)[2], upperq=quantile(median)[4], iqr=IQR(median), outlier = median > iqr * 2 + upperq) %>% select(-lowerq, -upperq, -iqr)
-
-full_family <- data_frame(
-  family=c("Aca", "Apo", "Bal", "Cha", "Gob", "Lab", "Pom", "Sco", "Tet"),
-  full_family=c("Acanthuridae", "Apogonidae", "Balistidae", "Chaetodontidae", "Gobiidae", "Labridae", "Pomacentridae", "Scorpaenidae", "Tetraodontidae")
-)
-
-all_stats %<>% left_join(full_family) %>% mutate(outlier_label = ifelse(outlier, as.character(mark), NA))
+all_stats <- bind_rows(meds, mads) %>% spread(stat, value)
 ```
 
-
-```{r turker_v_expert, fig.cap="Test figure caption", anchor="figure"}
-ggplot(all_stats, aes(median, mad, color=outlier)) + geom_point() + labs(x="Accuracy", y="Precision") + facet_wrap(~full_family) + geom_dl(aes(label=outlier_label), size=1, list("top.bumptwice", dl.trans(y=y+0.1), cex=0.75)) + scale_color_manual(values=c("black", "red")) + ylim(-max(abs(all_stats$mad) + 0.25), max(abs(all_stats$mad) + 0.25)) + theme("legend.position" = "none")
-```
-
-
-
-```{r geomorph_lm, eval=FALSE, echo=FALSE, cache=TRUE}
+```{r geomorph_lm, eval=FALSE}
 fmted <- format_for_gpagen(no_st)
 allsplit <- str_split_fixed(dimnames(fmted)$id, "_", 3)
 family_vec <- allsplit[, 1]
@@ -232,17 +215,20 @@ advanced.procD.lm(gpaed$coords ~ ind_vec,  ~ role_vec * ind_vec, ~ family_vec, i
 ```
 
 
-```{r median_tbl, eval=F, echo=F, results="asis", anchor="table", fig.cap="Median table"}
+```{r median_tbl, results="asis", anchor="table", fig.cap="Median table"}
 med_wide <- meds %>% spread(key=family, value=value)
 med_wide %>% knitr::kable(digits = 2, caption = "Median table")
 ```
 
-```{r mad_tbl, eval=F, echo=F, results="asis", anchor="table", fig.cap="MAD table"}
+```{r mad_tbl, results="asis", anchor="table", fig.cap="MAD table"}
 mad_wide <- mads %>% spread(key=family, value=value)
 mad_wide %>% knitr::kable(digits = 2, caption="MAD table")
 ```
 
 
+```{r turker_v_expert, anchor="figure"}
+ggplot(all_stats, aes(median, mad, label=mark)) + geom_text() + labs(x="Accuracy", y="Precision")
+```
 
 
 
@@ -251,7 +237,7 @@ We compare the difference in accuracy and precision between turkers and experts 
 The most accurate and precise points are those that are related to the position of the eye (landmarks E1 and E2). The least accurate are those in the opercular series (O1-O5), particularly the ones related to the preopercle (O1-O3) as well as in species where the preopercle is difficult to visualize from external morphology alone (e.g., Tetraodontidae). We also plot the median difference and the 
 
 
-```{r cv_table, echo=F, results="asis", anchor="table", message=FALSE}
+```{r cv_table, results="asis", anchor="table", message=FALSE}
 
 subsamp <- group_by(no_st, family, role) %>% sample_n(size=400) %>% ungroup()
 
@@ -263,16 +249,15 @@ CV <- subsamp %>% group_by(family) %>% do(estimator = errorest(role ~ mark:x + m
 
 CV_sum2 <- CV %>% summarise(family=family, qda_error=estimator[["error"]]) %>% separate("family", "family", sep="_", extra="drop")
 
-CV_sum <- left_join(CV_sum, CV_sum2) %>% left_join(full_family, by="family")
+CV_sum <- left_join(CV_sum, CV_sum2)
 
 # format for display
-CV_sum %>% transmute(`Family`=full_family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
+CV_sum %>% transmute(`Family`=family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
 ```
 
 Both linear and quadratic discriminant analysis with 10-fold cross validation (Table `r figr("cv_table")`) was unable to reliably distinguish between morphologists and crowdsourced workers using our acceptable misprediction threshold of 20%. 
 
-```{r, echo=FALSE}
-
+```{r turk_morph_procrustes_space, fig.cap="Hello", anchor="figure", message=FALSE}
 # Load data from the anonymized results file, remove students, drop bad marks
 df <- fish_landmarks %>%
 	filter(role != "student") %>% 
@@ -283,18 +268,13 @@ df <- fish_landmarks %>%
 df <- df %>% group_by(family, mark, role, sha1mac) %>% summarise(x=median(x), y=median(y))
 
 coords <- gpagen(format_for_gpagen(df), ShowPlot=F)$coords
-```
 
-
-Text text
-
-```{r turk_morph_procrustes_space, echo=FALSE, fig.cap="Testing my figure", anchor="figure"}
 plot_tangent_space(coords, "PC1", "PC2")
 ```
 
 Post text
 
-```{r, echo=FALSE}
+```{r brokenstick}
 # use broken stick method to get the principal components stopping point
 
 pc_res <- prcomp(two.d.array(coords))
@@ -310,7 +290,7 @@ We analyzed PC 1 through PC `r stopping_pc`, based on the broken-stick method of
 
 XXX: Include BAMM speciation / morphological evolution analysis. 
 
-```{r bamm_plots, echo=F, message=F, warning=F, anchor="figure", cache=T}
+```{r bamm_plots, message=F, warning=F, anchor="figure"}
 df <- fish_families %>% group_by(tip, mark, family) %>% summarise(x=median(x), y=median(y))
 
 splut <- gather(df, variable, val, x:y) %>% unite(id, family, tip, sep="|")
@@ -332,16 +312,14 @@ p <- ggplot(res2, aes(x=PC1, y=PC2, col=family)) + geom_point() + theme(legend.p
 res2 %>% select(name, PC1) %>% write.table(file="lol.txt", quote=F, row.names=F, col.names=F, sep="\t")
 ```
 
-```{r timing_plot, echo=FALSE, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received `r timing_data[[1, 'time']] %>% dminutes()` after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark."}
+```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received 6 minutes after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark."}
 # median time (in minutes) it takes an expert to measure these fishes
 timings <- (no_st %>% group_by(role) %>% summarise(duration=median(duration))) %>% mutate(total_time=duration * nrow(res2))
 
 morpho_per_image <- timings[1, 2] %>% as.numeric() %>% dminutes() %>% round(1)
 
 # data collection time plot
-timing_data <- fish_families %>% ungroup() %>% group_by(tip) %>% summarise(time=min(time_taken)) %>% arrange(time) %>% mutate(frac=1:n()/n()) 
-  
-ggplot(timing_data, aes(time, frac)) + geom_line() + labs(x="Time taken (in minutes) to receive data for one unique replicate", y="Fraction of image set complete") + theme_minimal() + xlim(0, NA)
+fish_families %>% group_by(worker, tip) %>% summarise(time=min(time_taken)) %>% arrange(time) %>% mutate(seq = 1:n(), frac = seq / n()) %>% ggplot(aes(dseconds(time) / eminutes(), frac)) + geom_line() + labs(x="Time taken (in minutes) to receive data for one unique replicate", y="Fraction of image set complete") + theme_minimal() + xlim(0, NA)
 
 total_turker_time <- max(fish_families$time_taken) %>% as.numeric %>% dminutes %>% round(1)
 ```
@@ -389,22 +367,22 @@ Conceived and designed the experiments: JC MEA. Performed the experiments: JC. A
 
 XXX: Best practices for turking
 
-```{r turker_morph_procrustes_other_pc23, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC2 and PC3 for turker / morphologist Procrustes space"}
+```{r turker_morph_procrustes_other_pc23, message=FALSE, warning=FALSE, fig.cap="PC2 and PC3 for turker / morphologist Procrustes space"}
 plot_tangent_space(coords, "PC2", "PC3")
 ```
 
-```{r turker_morph_procrustes_other_pc34, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
+```{r turker_morph_procrustes_other_pc34, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
 plot_tangent_space(coords, "PC3", "PC4")
 ```
 
-```{r turker_morph_procrustes_other_pc45, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC4 and PC5 for turker / morphologist Procrustes space"}
+```{r turker_morph_procrustes_other_pc45, message=FALSE, warning=FALSE, fig.cap="PC4 and PC5 for turker / morphologist Procrustes space"}
 plot_tangent_space(coords, "PC4", "PC5")
 ```
 
 
 # References
 
-```{r knitcitations_write, echo=FALSE, message=FALSE}
+```{r knitcitations_write, message=FALSE}
 write.bibtex(file="knitcitations.bib")
 # Also download Mendeley bibliography
 mendbib <- RCurl::getURL("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=1", .opts=RCurl::curlOptions(followlocation=TRUE))
