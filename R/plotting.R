@@ -7,7 +7,7 @@
 #' @param axis2 The name of the second axis to plot
 #' @return A `ggplot` object
 #' @export
-#' @import dplyr
+#' @importFrom dplyr left_join group_by summarise_ do
 #' @import ggplot2
 plot_tangent_space <- function(coords, axis1="PC1", axis2="PC2") {
   x <- geomorph::two.d.array(coords)
