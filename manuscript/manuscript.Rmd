@@ -268,30 +268,16 @@ df <- fish_landmarks %>%
 df <- df %>% group_by(family, mark, role, sha1mac) %>% summarise(x=median(x), y=median(y))
 
 coords <- gpagen(format_for_gpagen(df), ShowPlot=F)$coords
-
-
-real_plot_tangent_space <- function(coords, axis1="PC1", axis2="PC2") {
-  x <- two.d.array(coords)
-  pc.res <- prcomp(x)
-  pcdata <- pc.res$x
-  
-	res <- as.data.frame(pcdata)
-	res$id <- rownames(res)
-	res2 <- res %>% separate(id, into=c("family", "role","sha"), sep="_") %>% tbl_df()
-
-	# consensus in Procrustes space for downstream highlighting
-	dots <- list(
-		x=lazyeval::interp(~median(axis1, na.rm=T), axis1=as.name(axis1)),
-		y=lazyeval::interp(~median(axis2, na.rm=T), axis2=as.name(axis2)))
-	consensus <- res2 %>% group_by(family, role) %>% summarise_(.dots=dots)
-
-	p <- ggplot(res2, aes_string(axis1, axis2, group="family")) + geom_point(aes(col=family, shape=role)) + geom_point(aes(x, y), data=consensus, alpha=0.5, size=5, col="black") + geom_point(aes(x, y, col=family, shape=role), data=consensus) + stat_ellipse(aes(color=family), linetype=2, type="norm", level=0.95) + theme_minimal() + theme(legend.position="none")
-
-	direct.label(p, method="smart.grid")
-}
-
-real_plot_tangent_space(coords, "PC1", "PC2")
 ```
+
+
+Text text
+
+```{r turk_morph_procrustes_space, echo=FALSE, fig.cap="Testing my figure", anchor="figure"}
+plot_tangent_space(coords, "PC1", "PC2")
+```
+
+Post text
 
 ```{r, echo=FALSE}
 # use broken stick method to get the principal components stopping point
@@ -386,12 +372,16 @@ Conceived and designed the experiments: JC MEA. Performed the experiments: JC. A
 
 XXX: Best practices for turking
 
-```{r turker_morph_procrustes_other_pc34, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
-real_plot_tangent_space(coords, "PC3", "PC4")
+```{r turker_morph_procrustes_other_pc23, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC2 and PC3 for turker / morphologist Procrustes space"}
+plot_tangent_space(coords, "PC2", "PC3")
 ```
 
-```{r turker_morph_procrustes_other_pc56, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC5 and PC6 for turker / morphologist Procrustes space"}
-real_plot_tangent_space(coords, "PC5", "PC6")
+```{r turker_morph_procrustes_other_pc34, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
+plot_tangent_space(coords, "PC3", "PC4")
+```
+
+```{r turker_morph_procrustes_other_pc45, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="PC4 and PC5 for turker / morphologist Procrustes space"}
+plot_tangent_space(coords, "PC4", "PC5")
 ```
 
 
