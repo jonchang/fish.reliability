@@ -1,5 +1,10 @@
 sudo: required
 language: r
+apt_packages:
+    - texlive-xetex
+    - texlive-humanities
+    - latex-xcolor
+    - pgf
 r_github_packages:
     - rstudio/rmarkdown
     - hadley/readr
@@ -19,8 +24,15 @@ r_binary_packages:
     - knitcitations
     - ggplot2
     - stringr
+    - formatR
+    - highr
+    - markdown
+    - knitr
+    - yaml
+    - htmltools
+    - catools
+    - curl
 before_script:
-    - sudo apt-get install texlive-xetex latex-xcolor pgf texlive-humanities
 #    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
 #    - tar -xvf v2.3.0.tar.gz
 #    - cd bamm-2.3.0 && mkdir build && cd build && cmake .. && make -j && sudo make install

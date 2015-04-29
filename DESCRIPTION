@@ -9,7 +9,14 @@ Imports:
     tidyr,
     geomorph,
     RCurl,
-    lazyeval
+    lazyeval,
+    directlabels
+Suggests:
+    rmarkdown,
+    yaml,
+    kfigr,
+    knitcitations,
+    readr
 Depends: R (>= 3.2.0)
 License: AGPL
 LazyData: true
