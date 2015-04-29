@@ -122,30 +122,8 @@ Amazon Mechanical Turk ("MTurk") is a web-based service where Requesters can req
 
 ## Web-based geometric morphometrics
 
-![A screenshot of the web app that turkers used to digitize images. A live demonstration is available at <https://jonchang.github.io/eol-mturk-landmark/>](interface.png)
 
-We developed an application that runs completely on the user's local web browser. This simplifies the infrastructure challenge of needing to serve many crowdsdourced workers simultaneously. The web application is configured with a simple JavaScript Object Notation (JSON) file that describes the landmarks necessary to complete an image digitization task. Below is an example JSON file that demonstrates the utility of our web app:
-
-```json
-{
-    "C": {
-        "kind": "point",
-        "help": "Click the center of the eye."
-    },
-    "D": {
-        "kind": "line",
-        "help": "Click and drag from the left edge of the eye
-                 to the right edge of the eye."
-    },
-    "O": {
-        "kind": "curve",
-        "help": "Click and drag over the outline of the eye,
-                 starting from the leftmost point of the eye."
-    }
-}
-```
-
-Each digitization task to be completed is given a short abbreviation to aid task identification ("C" for center, "D" for diameter, and "O" for outline), and the type of task, "point", "line" or "curve", for homologous landmarks, linear measurements, and sliding semilandmarks can be specified. There is also an optional short help snippet displayed inline, which serve as a brief reminder for each landmark and complements a larger and more detailed protocol document that workers are required to read before beginning work (Supplementary Material).
+We developed an application that runs completely on the user's local web browser. This simplifies the infrastructure challenge of needing to serve many crowdsdourced workers simultaneously. The web application is configured with a simple JavaScript Object Notation (JSON) file that describes the landmarks necessary to complete an image digitization task (for more details, see Supplementary Material).
 
 Although digitizing and landmarking a single image [microtasks *sensu* @Good2013] is most effective for high-throughput work on MTurk, it is unsuitable for conducting controlled experiments. To solve this issue we created a server-side application backend that automatically distribute tasks according to a configurable set of images and experimental protocol. This application also mimics an official Amazon Mechanical Turk endpoint, to decouple the experimental backend from the image landmarking frontend. External non-MTurk workers can also participate in the same experiment, ensuring effective comparisons across these groups. The software is open source and uses PHP and SQLite, and can be installed on nearly all web hosting services (<https://github.com/jonchang/fake-mechanical-turk>). 
 
@@ -372,7 +350,31 @@ Conceived and designed the experiments: JC MEA. Performed the experiments: JC. A
 
 ## Supplementary material
 
-XXX: Best practices for turking
+Below is an example JSON file that demonstrates the utility of our web app:
+
+```json
+{
+    "C": {
+        "kind": "point",
+        "help": "Click the center of the eye."
+    },
+    "D": {
+        "kind": "line",
+        "help": "Click and drag from the left edge of the eye
+                 to the right edge of the eye."
+    },
+    "O": {
+        "kind": "curve",
+        "help": "Click and drag over the outline of the eye,
+                 starting from the leftmost point of the eye."
+    }
+}
+```
+
+Each digitization task to be completed is given a short abbreviation to aid task identification ("C" for center, "D" for diameter, and "O" for outline), and the type of task, "point", "line" or "curve", for homologous landmarks, linear measurements, and sliding semilandmarks can be specified. There is also an optional short help snippet displayed inline, which serve as a brief reminder for each landmark and complements a larger and more detailed protocol document that workers are required to read before beginning work.
+
+![A screenshot of the web app that turkers used to digitize images. A live demonstration is available at <https://jonchang.github.io/eol-mturk-landmark/>](interface.png)
+
 
 ```{r turker_morph_procrustes_other_pc23, message=FALSE, warning=FALSE, fig.cap="PC2 and PC3 for turker / morphologist Procrustes space"}
 coords_df <- pca_df(coords)
