@@ -4,19 +4,19 @@
 \alias{plot_tangent_space}
 \title{Plot specimens in tangent space}
 \usage{
-plot_tangent_space(coords, axis1 = "PC1", axis2 = "PC2")
+plot_tangent_space(coords_df, axis1 = "PC1", axis2 = "PC2")
 }
 \arguments{
-\item{coords}{An array (p x k x n) containing landmark coordinates for a set of aligned specimens, possibly from `geomorph::gpagen`. Array labels must be in the format `group1_group2_individual`.}
+\item{coords_df}{A PCA data frame, possibly from \link{pca_df}. Array labels must be in the format \code{group1_group2_individual}.}
 
 \item{axis1}{The name of the first axis to plot}
 
 \item{axis2}{The name of the second axis to plot}
 }
 \value{
-A `ggplot` object
+A \code{ggplot} object
 }
 \description{
-This function plots a set of Procrustes-aligned specimens in tangent space along their principal axes. This is a custom replacement for `geomorph::plotTangentSpace` tailored for the fish reliability project.
+This function plots a set of Procrustes-aligned specimens in tangent space along their principal axes. This is a custom replacement for \code{geomorph::plotTangentSpace} tailored for the fish reliability project.
 }
 

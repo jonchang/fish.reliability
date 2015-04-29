@@ -18,28 +18,26 @@ ip.lda <- function(object, newdata) {
   predict(object, newdata=newdata)$class
 }
 
-#' Formats a data frame for `geomorph::gpagen`
+#' Formats a data frame for \code{\link[geomorph]{gpagen}}
 #'
 #' @param df a data frame, with certain columns
 #' @return A 3D matrix
-#' @importFrom tidyr gather unite
-#' @importFrom magrittr %>%
+#' @import dplyr
 #' @export
 format_for_gpagen <- function(df) {
-  splut <- gather(df, variable, val, x:y) %>% unite(col=id, family, role, sha1mac)
+  splut <- tidyr::gather(df, variable, val, x:y) %>% tidyr::unite(col=id, family, role, sha1mac)
   xtabs(val ~ mark + variable + id, data=splut)
 }
 
 
 #' Hack the shit out of geomorph's slow procD.lm function
 #' @export
-#' @import geomorph
 my.procD.lm <- function (f1, iter = 999, RRPP = FALSE, int.first = FALSE, verbose = FALSE)
 {
   form.in <- formula(f1)
   Y <- eval(form.in[[2]], parent.frame())
   if (length(dim(Y)) == 3)
-    Y <- two.d.array(Y)
+    Y <- geomorph::two.d.array(Y)
   else Y <- as.matrix(Y)
   if (nrow(Y) != nrow(model.frame(form.in[-2])))
     stop("Different numbers of specimens in dependent and independent variables")

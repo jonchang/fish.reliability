@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.R
 \name{format_for_gpagen}
 \alias{format_for_gpagen}
-\title{Formats a data frame for `geomorph::gpagen`}
+\title{Formats a data frame for \code{\link[geomorph]{gpagen}}}
 \usage{
 format_for_gpagen(df)
 }
@@ -13,6 +13,6 @@ format_for_gpagen(df)
 A 3D matrix
 }
 \description{
-Formats a data frame for `geomorph::gpagen`
+Formats a data frame for \code{\link[geomorph]{gpagen}}
 }
 

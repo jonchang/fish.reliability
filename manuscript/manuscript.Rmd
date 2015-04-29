@@ -32,7 +32,7 @@ address:
 - address: |
     Department of Ecology and Evolutionary Biology, University of California, Los Angeles, CA, USA
   code: ucla
-word_count: 5000?
+word_count: 6000?
 ---
 
 ```{r prelude, echo=FALSE, message=FALSE, warning=FALSE}
@@ -155,9 +155,11 @@ Collecting landmark-based geometric morphometric data at scale permits detailed 
 
 The landmarks were chosen according to previously-published literature concerning fish shape [@Fink1995; @Cavalcanti1999; @Ruber2001a; @Klingenberg2003; @Chakrabarty2005; @Frederich2008; @Thacker2014], and included landmarks both easy to digitize, such as the anterior margin of the eye, and challenging to digitize, such as the opercular series. We used 5 replicate measurements per worker per image to quantify measurement error within and among observers [@Palmer1986] using *geomorph* `r citep(citation("geomorph"))`.
 
-We used the median shape of the combined experts' data as a baseline for all comparisons, as the "true" shape. To assess within-individual variation, we compared each worker's shape replicate to their own median shape. To assess within-group and between-group variation, we also compare those individual worker median shapes to the median shape of all other turkers and all other experts. We also measured the median absolute deviation (MAD) as a dispersion statistic for within-worker, within-group, and between-group comparisons.
+We used the median shape of the combined experts' data as the "true" shape for all comparisons. To assess the accuracy of worker data, as compared 
 
-To test whether turkers and experts were statistically distinguishable, 
+To assess the differences between turker and expert data, we compared the median turker position to the median expert position of each landmark. We assumed that the expert median was indeed the true position of that landmark, and calculated the absolute Euclidian distance. Larger distances would indicate low turker accuracy, while smaller distances would indicate high turker accuracy. We also examined the variance in turker landmarks. For each landmark, we rotated the cluster of points and took calculated the median absolute deviation between points along a single dimension. This 
+
+To assess within-individual variation, we compared each worker's shape replicate to their own median shape. To assess within-group and between-group variation, we also compare those individual worker median shapes to the median shape of all other turkers and all other experts. We also used the median absolute deviation (MAD) as a dispersion statistic for within-worker, within-group, and between-group comparisons. This is a statistic robust to outliers
 
 The curse of dimensionality is a common problem in machine learning, where $p$, the number of predictors, greatly exceeds $n$, the number of observations. Geometric morphometric datasets are typically extremely highly dimensional, with $2 * k - 1$ observations per 2D landmark. To reduce the dimensionality of our dataset, we orthogonalize our features used a generalized Procrustes superimposition as implement in the R package geomorph. We then use logistic regression on the PC axes, starting with PC1 and adding each subsequent axis in a stepwise fashion. We validate each model using $K$-fold cross-validation, which splits the data into $K$ equally sized groups, using $K-1$ groups to train the model and the last group to validate the model. This process is repeated for each subset of the groups. We set $K=10$ to validate the model, for its balanced statistical properties [@Kohavi1995; @Hastie2009]. Using 10-fold CV, we calculated the confusion matrix for each model in turn, and plot the sensitivity vs specificify (also known as the receiver operator characteristic curve).  
 
@@ -187,17 +189,27 @@ State the results, drawing attention to important details in tables and figures
 
 ## Reliability analysis
 
-```{r sum_table}
+```{r turker_v_expert, fig.cap="Test figure caption", anchor="figure"}
 no_st <- fish_landmarks %>% filter(role != "student") %>% mutate(role = factor(role))
 
-pcaed <- no_st %>% group_by(family, mark) %>% do(as_df(prcomp(cbind(.$x, .$y), scale=F, center=T)$x, role=as.character(.$role), ident=as.character(.$sha1mac))) %>% mutate(PC1 = as.numeric(PC1), PC2 = as.numeric(PC2))
+tmp <- no_st %>% filter(family == "Aca", mark %in% c("A1", "A2"))
 
-meds <- pcaed %>% group_by(family, role, mark) %>% summarise(med=median(PC1)) %>% ungroup() %>% spread(role, med) %>% transmute(family, mark, value = log(abs(turker - morphologist)), stat="median")
+accuracy <- no_st %>% group_by(family, mark) %>% summarise(median = dist_2d(x, y, role)) %>% group_by(family) %>% mutate(outlier=upper_outlier(median, extreme = 2))
 
-mads <- pcaed %>% group_by(family, role, mark) %>% summarise(mad=mad(PC1)) %>% ungroup() %>% spread(role, mad) %>% transmute(family, mark, value = log(turker / morphologist), stat="mad")
+precision <- no_st %>% group_by(role, family, mark) %>% summarise(var = mad_2d(x, y)) %>% spread(role, var) %>% group_by(family, mark) %>% transmute(mad = log(turker / morphologist))
 
-all_stats <- bind_rows(meds, mads) %>% spread(stat, value)
+
+full_family <- data_frame(
+  family=c("Aca", "Apo", "Bal", "Cha", "Gob", "Lab", "Pom", "Sco", "Tet"),
+  full_family=c("Acanthuridae", "Apogonidae", "Balistidae", "Chaetodontidae", "Gobiidae", "Labridae", "Pomacentridae", "Scorpaenidae", "Tetraodontidae")
+)
+
+all_stats <- left_join(accuracy, precision) %>% left_join(full_family) %>% mutate(outlier_label = ifelse(outlier, as.character(mark), NA))
+
+ggplot(all_stats, aes(median, mad, color=outlier)) + geom_point() + labs(x="Accuracy", y="Precision: log2 turker variance / expert variance ") + facet_wrap(~full_family)# + geom_dl(aes(label=outlier_label), size=1, list("top.bumptwice", dl.trans(y=y+0.1), cex=0.75)) + scale_color_manual(values=c("black", "red")) + ylim(-max(abs(all_stats$mad) + 0.25), max(abs(all_stats$mad) + 0.25)) + theme("legend.position" = "none")
 ```
+
+
 
 ```{r geomorph_lm, eval=FALSE}
 fmted <- format_for_gpagen(no_st)
@@ -215,20 +227,17 @@ advanced.procD.lm(gpaed$coords ~ ind_vec,  ~ role_vec * ind_vec, ~ family_vec, i
 ```
 
 
-```{r median_tbl, results="asis", anchor="table", fig.cap="Median table"}
+```{r median_tbl, eval=F, results="asis", anchor="table", fig.cap="Median table"}
 med_wide <- meds %>% spread(key=family, value=value)
 med_wide %>% knitr::kable(digits = 2, caption = "Median table")
 ```
 
-```{r mad_tbl, results="asis", anchor="table", fig.cap="MAD table"}
+```{r mad_tbl, eval=F, results="asis", anchor="table", fig.cap="MAD table"}
 mad_wide <- mads %>% spread(key=family, value=value)
 mad_wide %>% knitr::kable(digits = 2, caption="MAD table")
 ```
 
 
-```{r turker_v_expert, anchor="figure"}
-ggplot(all_stats, aes(median, mad, label=mark)) + geom_text() + labs(x="Accuracy", y="Precision")
-```
 
 
 
@@ -249,10 +258,10 @@ CV <- subsamp %>% group_by(family) %>% do(estimator = errorest(role ~ mark:x + m
 
 CV_sum2 <- CV %>% summarise(family=family, qda_error=estimator[["error"]]) %>% separate("family", "family", sep="_", extra="drop")
 
-CV_sum <- left_join(CV_sum, CV_sum2)
+CV_sum <- left_join(CV_sum, CV_sum2) %>% left_join(full_family, by="family")
 
 # format for display
-CV_sum %>% transmute(`Family`=family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
+CV_sum %>% transmute(`Family`=full_family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
 ```
 
 Both linear and quadratic discriminant analysis with 10-fold cross validation (Table `r figr("cv_table")`) was unable to reliably distinguish between morphologists and crowdsourced workers using our acceptable misprediction threshold of 20%. 
@@ -269,7 +278,7 @@ df <- df %>% group_by(family, mark, role, sha1mac) %>% summarise(x=median(x), y=
 
 coords <- gpagen(format_for_gpagen(df), ShowPlot=F)$coords
 
-plot_tangent_space(coords, "PC1", "PC2")
+plot_tangent_space(pca_df(coords), "PC1", "PC2")
 ```
 
 Post text
@@ -301,30 +310,28 @@ groups <- str_match(dimnames(res)$id, "(.*)\\|")[, 2] %>% factor %>% as.numeric
 
 full_coords <- gpagen(res, ShowPlot=F)$coords
 
-res <- plotTangentSpace(full_coords, groups=groups, axis1=1, axis2=2, verbose=T, warpgrids=F)$pc.scores
+pcaed <- pca_df(full_coords) %>% separate(id, into=c("family", "name"), sep="\\|", extra="drop")
 
-res <- as.data.frame(res)
-res$id <- rownames(res)
-res2<- res %>% separate(id, into=c("family", "name"), sep="\\|", extra="drop") %>% tbl_df()
+pcaed %>% select(name, PC1) %>% write.table(file="lol.txt", quote=F, row.names=F, col.names=F, sep="\t")
 
-p <- ggplot(res2, aes(x=PC1, y=PC2, col=family)) + geom_point() + theme(legend.position="none")
-
-res2 %>% select(name, PC1) %>% write.table(file="lol.txt", quote=F, row.names=F, col.names=F, sep="\t")
+plot_tangent_space2(pcaed, labelmethod=list("chull.grid"))
 ```
 
-```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received 6 minutes after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark."}
+```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received `r timing_data[[1, 'time']] %>% dminutes()` after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark."}
 # median time (in minutes) it takes an expert to measure these fishes
-timings <- (no_st %>% group_by(role) %>% summarise(duration=median(duration))) %>% mutate(total_time=duration * nrow(res2))
+timings <- (no_st %>% group_by(role) %>% summarise(duration=median(duration))) %>% mutate(total_time=duration * nrow(no_st))
 
 morpho_per_image <- timings[1, 2] %>% as.numeric() %>% dminutes() %>% round(1)
 
 # data collection time plot
-fish_families %>% group_by(worker, tip) %>% summarise(time=min(time_taken)) %>% arrange(time) %>% mutate(seq = 1:n(), frac = seq / n()) %>% ggplot(aes(dseconds(time) / eminutes(), frac)) + geom_line() + labs(x="Time taken (in minutes) to receive data for one unique replicate", y="Fraction of image set complete") + theme_minimal() + xlim(0, NA)
+timing_data <- fish_families %>% ungroup() %>% group_by(tip) %>% summarise(time=min(time_taken)) %>% arrange(time) %>% mutate(frac=1:n()/n())
+
+ggplot(timing_data, aes(time, frac)) + geom_line() + labs(x="Time taken (in minutes) to receive data for one unique replicate", y="Fraction of image set complete") + theme_minimal() + xlim(0, NA)
 
 total_turker_time <- max(fish_families$time_taken) %>% as.numeric %>% dminutes %>% round(1)
 ```
 
-Using a median-expert time of `r as.character(morpho_per_image)` per image, we estimate that a single morphologist would take `r as.character(morpho_per_image * nrow(res2))` to landmark all `r nrow(res2)` images. At 5x replication, this would take `r as.character(morpho_per_image * nrow(res2) * 5)`. By comparison, turkers took a total of `r as.character(total_turker_time)` to complete all images at 5x replication.
+Using a median-expert time of `r as.character(morpho_per_image)` per image, we estimate that a single morphologist would take `r as.character(morpho_per_image * nrow(no_st))` to landmark all `r nrow(no_st)` images. At 5x replication, this would take `r as.character(morpho_per_image * nrow(no_st) * 5)`. By comparison, turkers took a total of `r as.character(total_turker_time)` to complete all images at 5x replication.
 
 The BAMMtools analysis identified areas of each phylogeny that were experiencing faster rates of body shape evolution. XXX: Talk about these in more detail.
 
@@ -368,15 +375,16 @@ Conceived and designed the experiments: JC MEA. Performed the experiments: JC. A
 XXX: Best practices for turking
 
 ```{r turker_morph_procrustes_other_pc23, message=FALSE, warning=FALSE, fig.cap="PC2 and PC3 for turker / morphologist Procrustes space"}
-plot_tangent_space(coords, "PC2", "PC3")
+coords_df <- pca_df(coords)
+plot_tangent_space(coords_df, "PC2", "PC3")
 ```
 
 ```{r turker_morph_procrustes_other_pc34, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
-plot_tangent_space(coords, "PC3", "PC4")
+plot_tangent_space(coords_df, "PC3", "PC4")
 ```
 
 ```{r turker_morph_procrustes_other_pc45, message=FALSE, warning=FALSE, fig.cap="PC4 and PC5 for turker / morphologist Procrustes space"}
-plot_tangent_space(coords, "PC4", "PC5")
+plot_tangent_space(coords_df, "PC4", "PC5")
 ```
 
 
