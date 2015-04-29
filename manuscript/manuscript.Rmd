@@ -14,6 +14,8 @@ bibliography:
 output:
   pdf_document:
     fig_caption: yes
+    fig_height: 5
+    fig_width: 7
     keep_tex: yes
     latex_engine: xelatex
     template: inc/mstemplate.tex
@@ -53,15 +55,16 @@ library("vegan")
 library("lubridate")
 library("directlabels")
 library("BAMMtools")
-library("knitcitations")
+library("knitr")
 library("kfigr")
+library("knitcitations")
 library("fish.reliability")
 options("citation_format"="pandoc")
 cleanbib()
 set.seed(111) # reproducible and stable sampling
 data(fish_landmarks)
 data(fish_families)
-knitr::opts_chunk$set(echo=FALSE, cache=1)
+knitr::opts_chunk$set(echo=FALSE, cache=1, fig.align="center")
 ```
 
 <!--
@@ -167,6 +170,9 @@ State the results, drawing attention to important details in tables and figures
 
 ## Reliability analysis
 
+
+
+
 ```{r turker_v_expert, fig.cap="Test figure caption", anchor="figure"}
 no_st <- fish_landmarks %>% filter(role != "student") %>% mutate(role = factor(role))
 
@@ -186,6 +192,8 @@ all_stats <- left_join(accuracy, precision) %>% left_join(full_family) %>% mutat
 
 ggplot(all_stats, aes(median, mad, color=outlier)) + geom_point() + labs(x="Accuracy", y="Precision: log2 turker variance / expert variance ") + facet_wrap(~full_family)# + geom_dl(aes(label=outlier_label), size=1, list("top.bumptwice", dl.trans(y=y+0.1), cex=0.75)) + scale_color_manual(values=c("black", "red")) + ylim(-max(abs(all_stats$mad) + 0.25), max(abs(all_stats$mad) + 0.25)) + theme("legend.position" = "none")
 ```
+
+
 
 
 
@@ -244,7 +252,11 @@ CV_sum %>% transmute(`Family`=full_family, `LDA`=error, `QDA`=qda_error) %>% kni
 
 Both linear and quadratic discriminant analysis with 10-fold cross validation (Table `r figr("cv_table")`) was unable to reliably distinguish between morphologists and crowdsourced workers using our acceptable misprediction threshold of 20%. 
 
-```{r turk_morph_procrustes_space, fig.cap="Hello", anchor="figure", message=FALSE}
+
+
+
+
+```{r turk_morph_procrustes_space, fig.cap="Turker morpho space", anchor="figure"}
 # Load data from the anonymized results file, remove students, drop bad marks
 df <- fish_landmarks %>%
 	filter(role != "student") %>% 
@@ -259,7 +271,13 @@ coords <- gpagen(format_for_gpagen(df), ShowPlot=F)$coords
 plot_tangent_space(pca_df(coords), "PC1", "PC2")
 ```
 
-Post text
+
+
+
+Post text 
+
+
+
 
 ```{r brokenstick}
 # use broken stick method to get the principal components stopping point
@@ -277,7 +295,9 @@ We analyzed PC 1 through PC `r stopping_pc`, based on the broken-stick method of
 
 XXX: Include BAMM speciation / morphological evolution analysis. 
 
-```{r bamm_plots, message=F, warning=F, anchor="figure"}
+
+
+```{r bamm_plots, message=F, warning=F, fig.show="hold", fig.cap="Family figures", anchor="figure"}
 df <- fish_families %>% group_by(tip, mark, family) %>% summarise(x=median(x), y=median(y))
 
 splut <- gather(df, variable, val, x:y) %>% unite(id, family, tip, sep="|")
@@ -295,7 +315,14 @@ pcaed %>% select(name, PC1) %>% write.table(file="lol.txt", quote=F, row.names=F
 plot_tangent_space2(pcaed, labelmethod=list("chull.grid"))
 ```
 
-```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received `r timing_data[[1, 'time']] %>% dminutes()` after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark."}
+
+asdfsdf
+
+
+
+
+
+```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received 8 minutes after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark.", anchor="figure"}
 # median time (in minutes) it takes an expert to measure these fishes
 timings <- (no_st %>% group_by(role) %>% summarise(duration=median(duration))) %>% mutate(total_time=duration * nrow(no_st))
 
@@ -308,6 +335,10 @@ ggplot(timing_data, aes(time, frac)) + geom_line() + labs(x="Time taken (in minu
 
 total_turker_time <- max(fish_families$time_taken) %>% as.numeric %>% dminutes %>% round(1)
 ```
+
+
+
+
 
 Using a median-expert time of `r as.character(morpho_per_image)` per image, we estimate that a single morphologist would take `r as.character(morpho_per_image * nrow(no_st))` to landmark all `r nrow(no_st)` images. At 5x replication, this would take `r as.character(morpho_per_image * nrow(no_st) * 5)`. By comparison, turkers took a total of `r as.character(total_turker_time)` to complete all images at 5x replication.
 
@@ -350,6 +381,15 @@ Conceived and designed the experiments: JC MEA. Performed the experiments: JC. A
 
 ## Supplementary material
 
+<!-- reset figure numbering for supplement -->
+
+\renewcommand\thefigure{S\arabic{figure}}
+\setcounter{figure}{0}
+
+```{r}
+knitr::opts_chunk$set(fig.cur=1)
+```
+
 Below is an example JSON file that demonstrates the utility of our web app:
 
 ```json
@@ -389,6 +429,8 @@ plot_tangent_space(coords_df, "PC3", "PC4")
 plot_tangent_space(coords_df, "PC4", "PC5")
 ```
 
+<!-- spit out all figures before references -->
+\clearpage
 
 # References
 
