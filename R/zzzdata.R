@@ -16,7 +16,7 @@
 #'   \item{duration}{how long, in seconds, this image took to landmark}
 #'   \item{family}{the family that this specimen belonged to}
 #' }
-"fish_landmarks"
+"fish_reliability"
 
 
 

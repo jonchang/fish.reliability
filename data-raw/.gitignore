@@ -1,0 +1,6 @@
+# Ignore everything but the scripts used to transform the raw data
+*
+!.gitignore
+!README.md
+!fish_families.R
+!fish_reliability.R
