@@ -57,7 +57,7 @@ allurls <- alldata %>% distinct(workerId, list) %>% rowwise() %>% do(get_urls(.$
 
 hugedata <- ungroup(alldata) %>% transmute(workerId, sequence=as.integer(sequence), role) %>% inner_join(allmarks) %>% inner_join(alldurations) %>% inner_join(allurls)
 
-fish_reliability <- hugedata %>% select(workerId) %>% distinct(workerId) %>% rowwise() %>% do(data.frame(workerId=.$workerId, sha1mac=hmac(secret, .$workerId, algo="sha1"))) %>% left_join(hugedata) %>% mutate(fn=str_match(url, "([-a-zA-Z0-9_])+\\.jpg$")[, 1]) %>% select(-url, -workerId)
+fish_reliability <- hugedata %>% select(workerId) %>% distinct(workerId) %>% rowwise() %>% do(data.frame(workerId=.$workerId, sha1mac=hmac(secret, .$workerId, algo="sha1"))) %>% left_join(hugedata) %>% mutate(fn=str_match(url, "([-a-zA-Z0-9_])+\\.jpg$")[, 1]) %>% separate(fn, into="family", remove = T, extra = "drop") %>% select(-url, -workerId)
 
 write_csv(fish_reliability, path = "fish_reliability.csv")
 

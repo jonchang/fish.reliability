@@ -47,7 +47,6 @@ library("magrittr")
 library("tidyr")
 library("reshape2")
 library("scales")
-library("grid")
 library("geomorph")
 library("rjson")
 library("ipred")
@@ -98,8 +97,6 @@ Point 4: identify the conclusions, the wider implications and the relevance to m
 <!--
 Introduction: State the reason for the work, the context and the hypotheses being tested.
 -->
-
-XXX: Use r package captioner for captions
 
 Integrating phenotypic data, such as anatomy, behavior, physiology, and other traits, with phylogenies is powerful workflow for investigating the patterns of biological evolution. Recent advances in next-generation sequencing [@Shendure2008; @Meyer2008] and sequence capture technologies [@Faircloth2012b; @Lemmon2012] have made phylogenetic inference of large radiations of organisms possible [@McCormack2012; @McCormack2013; @Faircloth2013; @Faircloth2014].
 These large phylogenies have been successfully used in conjunction with existing comprehensive phenotypic datasets to answer key questions about the mode and tempo of diversification and morphological evolution [@Rabosky2013]. However, similar breakthroughs for generating new phenotypic datasets have been comparatively uncommon, likely due to the high expense and effort required [reviewed in @Burleigh2013].
@@ -175,8 +172,6 @@ State the results, drawing attention to important details in tables and figures
 
 ```{r turker_v_expert, fig.cap="Test figure caption", anchor="figure"}
 no_st <- fish_reliability %>% filter(role != "student") %>% mutate(role = factor(role))
-
-tmp <- no_st %>% filter(family == "Aca", mark %in% c("A1", "A2"))
 
 accuracy <- no_st %>% group_by(family, mark) %>% summarise(median = dist_2d(x, y, role)) %>% group_by(family) %>% mutate(outlier=upper_outlier(median, extreme = 2))
 
@@ -437,7 +432,7 @@ plot_tangent_space(coords_df, "PC4", "PC5")
 ```{r knitcitations_write, message=FALSE}
 write.bibtex(file="knitcitations.bib")
 # Also download Mendeley bibliography
-mendbib <- RCurl::getURL("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=1", .opts=RCurl::curlOptions(followlocation=TRUE))
+mendbib <- RCurl::getURL("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=1", .opts=RCurl::curlOptions(followlocation=TRUE), ssl.verifypeer = FALSE)
 cat(mendbib, file="library.bib")
 ```
 
