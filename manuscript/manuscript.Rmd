@@ -62,7 +62,7 @@ library("fish.reliability")
 options("citation_format"="pandoc")
 cleanbib()
 set.seed(111) # reproducible and stable sampling
-data(fish_landmarks)
+data(fish_reliability)
 data(fish_families)
 knitr::opts_chunk$set(echo=FALSE, cache=1, fig.align="center")
 ```
@@ -174,7 +174,7 @@ State the results, drawing attention to important details in tables and figures
 
 
 ```{r turker_v_expert, fig.cap="Test figure caption", anchor="figure"}
-no_st <- fish_landmarks %>% filter(role != "student") %>% mutate(role = factor(role))
+no_st <- fish_reliability %>% filter(role != "student") %>% mutate(role = factor(role))
 
 tmp <- no_st %>% filter(family == "Aca", mark %in% c("A1", "A2"))
 
@@ -258,7 +258,7 @@ Both linear and quadratic discriminant analysis with 10-fold cross validation (T
 
 ```{r turk_morph_procrustes_space, fig.cap="Turker morpho space", anchor="figure"}
 # Load data from the anonymized results file, remove students, drop bad marks
-df <- fish_landmarks %>%
+df <- fish_reliability %>%
 	filter(role != "student") %>% 
 	separate(col=mark, into=c("cat", "cat_seq"), sep=1, remove=F, convert=T) %>%
 	filter(!(family %in% c("Bal") & mark %in% c("D1","D2")), !mark %in% c("O1","O2","O3","O4","O5", "A3", "D3", "D4"))
@@ -297,7 +297,7 @@ XXX: Include BAMM speciation / morphological evolution analysis.
 
 
 
-```{r bamm_plots, message=F, warning=F, fig.show="hold", fig.cap="Family figures", anchor="figure"}
+```{r sevenfamily_tangent_plot, message=F, warning=F, fig.show="hold", fig.cap="Family figures", anchor="figure"}
 df <- fish_families %>% group_by(tip, mark, family) %>% summarise(x=median(x), y=median(y))
 
 splut <- gather(df, variable, val, x:y) %>% unite(id, family, tip, sep="|")
@@ -372,7 +372,7 @@ We stress that our work does not attempt to, and will likely never displace trad
 
 # Acknowledgements
 
-We thank XXX, YYY, and ZZZ for helpful comments on the manuscript, as well as Tina Marcroft, Bruno Frédérich, Vanson Liu, Rosalia Aguilar, Ryan Ellingson, Francesco Pickens, Colette LaRochelle, and the `r (fish_landmarks %>% filter(role == "turker") %>% distinct(sha1mac) %>% nrow()) + (fish_families %>% select(worker) %>% distinct() %>% nrow()) ` Amazon Mechanical Turk workers that contributed their time and effort. We also thank Dan Rabosky, Brian Sidlauskas, Matthew McGee, Adam Summers, and Michael Burns for insightful discussions about fish morphology and digitization protocols. Katie Staab, Tonya Kane, and their `r fish_landmarks %>% filter(role == "student") %>% distinct(sha1mac) %>% nrow()` undergraduate students served as beta testers for the methods in this study. This work was supported by an Encyclopedia of Life David M. Rubenstein Fellowship (EOL-33066-13), a Stephen and Ruth Wainwright Fellowship, and a UCLA Research and Conference Award to JC. (XXX: Mike's grants?). Travel support to present this research was also provided by the Society for Study of Evolution to JC.
+We thank XXX, YYY, and ZZZ for helpful comments on the manuscript, as well as Tina Marcroft, Bruno Frédérich, Vanson Liu, Rosalia Aguilar, Ryan Ellingson, Francesco Pickens, Colette LaRochelle, and the `r (fish_reliability %>% filter(role == "turker") %>% distinct(sha1mac) %>% nrow()) + (fish_families %>% select(worker) %>% distinct() %>% nrow()) ` Amazon Mechanical Turk workers that contributed their time and effort. We also thank Dan Rabosky, Brian Sidlauskas, Matthew McGee, Adam Summers, and Michael Burns for insightful discussions about fish morphology and digitization protocols. Katie Staab, Tonya Kane, and their `r fish_reliability %>% filter(role == "student") %>% distinct(sha1mac) %>% nrow()` undergraduate students served as beta testers for the methods in this study. This work was supported by an Encyclopedia of Life David M. Rubenstein Fellowship (EOL-33066-13), a Stephen and Ruth Wainwright Fellowship, and a UCLA Research and Conference Award to JC. (XXX: Mike's grants?). Travel support to present this research was also provided by the Society for Study of Evolution to JC.
 
 ## Author contributions
 
