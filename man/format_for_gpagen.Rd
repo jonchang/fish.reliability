@@ -2,12 +2,19 @@
 % Please edit documentation in R/functions.R
 \name{format_for_gpagen}
 \alias{format_for_gpagen}
+\alias{format_for_gpagen_}
 \title{Formats a data frame for \code{\link[geomorph]{gpagen}}}
 \usage{
-format_for_gpagen(df)
+format_for_gpagen(df, ...)
+
+format_for_gpagen_(df, ..., .dots)
 }
 \arguments{
-\item{df}{a data frame, with certain columns}
+\item{df}{a data frame. must include columns "x" and "y"}
+
+\item{...}{columns to include as labels}
+
+\item{.dots}{used to work around nonstandard evaluation}
 }
 \value{
 A 3D matrix

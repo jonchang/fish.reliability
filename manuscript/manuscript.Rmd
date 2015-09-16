@@ -23,18 +23,19 @@ output:
     toc: yes
   word_document: default
 documentclass: inc/msarticle
+endfloat: yes
 fontsize: 11pt
 geometry: margin=1.2in
 layout: preprint
 lineno: yes
-linestretch: 1.05
+linestretch: 2
 csl: inc/methods-in-ecology-and-evolution.csl
 running_head: Fast crowdsourced phenotypic data collection
 address:
 - address: |
     Department of Ecology and Evolutionary Biology, University of California, Los Angeles, CA, USA
   code: ucla
-word_count: 6000?
+word_count: 7000
 ---
 
 ```{r prelude, echo=FALSE, message=FALSE, warning=FALSE}
@@ -57,6 +58,7 @@ library("BAMMtools")
 library("knitr")
 library("kfigr")
 library("knitcitations")
+library("parallel")
 library("fish.reliability")
 options("citation_format"="pandoc")
 cleanbib()
@@ -88,9 +90,11 @@ Point 4: identify the conclusions, the wider implications and the relevance to m
 
 2. Here, we present a method to quickly and accurately gather morphometric data using crowdsourced image-based landmarking. 
 
-3. We find that crowdsourced workers perform similarly to experienced morphologists on the same digitization tasks. We also demonstrate the speed and accuracy of our method on 7 families of ray-finned fishes (Actinopterygii), and find that rates of body shape evolution are correlated with diversification rates.
+3. We find that crowdsourced workers perform similarly to experienced morphologists on the same digitization tasks. We also demonstrate the speed and accuracy of our method on seven families of ray-finned fishes (Actinopterygii).
 
-4. Crowdsourcing will enable the collection of morphological data across vast radiations of organisms, and will facilitate richer inference on the macroevolutionary processes that shape phenotypic diversity across the tree of life.
+4. Crowdsourcing will enable the collection of morphological data across vast radiations of organisms, and can facilitate richer inference on the macroevolutionary processes that shape phenotypic diversity across the tree of life.
+
+**Keywords**: crowdsourcing, morphometrics, phenotyping, morphology, comparative methods, macroevolution, Actinopterygii 
 
 # Introduction
 
@@ -98,17 +102,18 @@ Point 4: identify the conclusions, the wider implications and the relevance to m
 Introduction: State the reason for the work, the context and the hypotheses being tested.
 -->
 
-Integrating phenotypic data, such as anatomy, behavior, physiology, and other traits, with phylogenies is powerful workflow for investigating the patterns of biological evolution. Recent advances in next-generation sequencing [@Shendure2008; @Meyer2008] and sequence capture technologies [@Faircloth2012b; @Lemmon2012] have made phylogenetic inference of large radiations of organisms possible [@McCormack2012; @McCormack2013; @Faircloth2013; @Faircloth2014].
-These large phylogenies have been successfully used in conjunction with existing comprehensive phenotypic datasets to answer key questions about the mode and tempo of diversification and morphological evolution [@Rabosky2013]. However, similar breakthroughs for generating new phenotypic datasets have been comparatively uncommon, likely due to the high expense and effort required [reviewed in @Burleigh2013].
+Integrating phenotypic data, such as anatomy, behavior, physiology, and other traits, with phylogenies is powerful strategy for investigating the patterns of biological evolution. Recent advances in next-generation sequencing [@Shendure2008; @Meyer2008] and sequence capture technologies [@Faircloth2012b; @Lemmon2012] have made phylogenetic inference of large radiations of organisms possible [@McCormack2012; @McCormack2013; @Faircloth2013; @Faircloth2014]. However, similar breakthroughs for generating new phenotypic datasets have been comparatively uncommon, likely due to the high expense and effort required [reviewed in @Burleigh2013].
 
-Creating these large phenotypic datasets has generally required an extended dedicated effort of measuring and describing morphological or behavioral traits that are then coded into a comprehensive data matrix. One such example is the Phenoscaping project [<http://kb.phenoscape.org>; @Deans2015], and its complementary efforts in the Vertebrate Taxonomy Ontogeny [@Midford2013] and Hymenoptera Anatomy Ontology [@Yoder2010], which requires large amounts of researcher effort to compile. Other approaches include using machine learning [@Mckinney2013a] or natural language processing [@Cui2012a] to identify or infer phenotypes. These statistical techniques function ideally with either a large training dataset or a complex model [@Brill2003; @Halevy2009; @Hastie2009], both of which also require intensive researcher effort to build and validate. Finally, methods such as high-throughput infrared imaging, mass spectrometry, and chromatography have been successfully used in plant physiology [@Furbank2011]
+Creating these large phenotypic datasets has generally required an extended dedicated effort of measuring and describing morphological or behavioral traits that are then coded into a comprehensive data matrix. One such example is the Phenoscaping project [<http://kb.phenoscape.org>; @Deans2015], and related efforts in the Vertebrate Taxonomy Ontogeny [@Midford2013] and Hymenoptera Anatomy Ontology [@Yoder2010], which require large amounts of researcher effort to collate. Other approaches include using machine learning [@Dececchi2015], machine vision [@Corney2012; @Corney2012a], or natural language processing [@Cui2012a] to identify or infer phenotypes. These statistical techniques function ideally with either a large training dataset (e.g., a predefined ontogeny database) or a complex model [@Brill2003; @Halevy2009; @Hastie2009], both of which also require intensive researcher effort to build and validate. Finally, methods such as high-throughput infrared imaging, mass spectrometry, and chromatography have been successfully used in plant physiology [@Furbank2011]
  and microbiology [@Skelly2013], but these methods may not be applicable for zoological researchers.
-These approaches all share a similar goal of collecting large comparative datasets, but also require large investments in researcher effort. This bottleneck has limited the taxonomic breadth and depth of research in comparative biology.
+These approaches all share a similar goal of collecting large comparative datasets, but also require large investments in researcher effort. This bottleneck in researcher availability has limited the scope of work in comparative biology.
 
-Here we present a method and toolkit to efficiently collect two-dimensional geometric morphometric phenotypic data at a "phylogenomic" scale. 
+Although it is now possible to build phylogenetic trees with thousands of tips, and phenotypic data sets have similarly been growing larger and larger, the traits that are typically studied at this scale tend to be simple: geographic occurrences [@Jetz2012], one or two continuous characters [@Harmon2010; @Rabosky2013], a single discrete character [@Goldberg2010; @Edwards2011; @Price2012], or some combination of these [@Zanne2014; @Pyron2014]. A richer understanding of the forces that shape macroevolution requires the collection of more detailed phenotypic trait data at scale. 
+
+Here we present a method and toolkit to efficiently collect two-dimensional geometric morphometric phenotypic data at a high-throughput "phenomic" scale. 
 We developed a novel web browser-based image landmarking application, and use Amazon Mechanical Turk (<https://www.mturk.com>) to distribute digitization tasks to remote workers (hereafter *turkers*) over the Internet, who are paid for their contributions.
 We evaluate the accuracy and precision of turkers by assigning identical image sets and digitization protocols to users who are experienced with fish morphology (hereafter *experts*), and compare the inter- and intra-observer differences between turkers and experts.
-As an example of how this new method may be used, we construct a phylogenetic analysis pipeline to download photographs and phylogenies of 7 actinopterygiian families from the web, collect Mechanical Turk shape results, and analyze the rate of diversification and body shape evolution using BAMM [@Rabosky2014a].
+To illustrate the efficiency of this approach, we construct a phylogenetic analysis pipeline to download photographs and phylogenies of seven actinopterygiian families from the web, collect Mechanical Turk shape results, analyze the rate of diversification and body shape evolution using BAMM [@Rabosky2014a], and compare the time required for this workflow to traditional approaches. We also discuss the role that crowdsourcing is best suited in large-scale morphological analyses, and suggest ways to integrate crowdsourced data as part of larger initiatives to digitize biodiversity.
 
 # Materials and methods
 
@@ -118,47 +123,37 @@ Materials and methods: Include sufficient details for the work to be repeated.
 
 ## Amazon Mechanical Turk
 
-Amazon Mechanical Turk ("MTurk") is a web-based service where Requesters can request work, known as Human Intelligence Tasks ("HITs") to be performed by Workers. Workers work from home and submit the tasks over the Internet, where Requesters review it, and, if they are satisfied with the results, accept the work and pay the Worker. We use MTurk as a platform to distribute our geometric morphometric tasks and financially compensate the worker accordingly. Scientific collection of data over MTurk and similar services has generally been limited to the fields of psychology and computer science, and there have been few attempts to crowdsource biological trait data [but see @Burleigh2013].
+Amazon Mechanical Turk ("MTurk") is a web-based service where Requesters can request work, known as Human Intelligence Tasks ("HITs") to be performed by Workers. Workers work from home and submit the tasks over the Internet, where Requesters review it, and, if they are satisfied with the results, accept the work and pay the Worker. We use MTurk as a platform to distribute our geometric morphometric tasks and financially compensate the worker accordingly. Scientific collection of data over MTurk and similar services has generally been limited to the fields of psychology and computer science, and there have been few attempts to crowdsource biological trait data [@Burleigh2013].
 
 ## Web-based geometric morphometrics
 
+We developed an geometric morphometric digitization application that runs completely on the user's local web browser, using the HTML5 Canvas interface. This simplifies the infrastructure challenge of needing to serve many crowdsourced workers simultaneously, since workers will not need to download desktop software such as tpsDig (<http://life.bio.sunysb.edu/ee/rohlf/software.html>) before generating data. The web application is configured with a simple JavaScript Object Notation (JSON) file that describes the landmarks necessary to complete an image digitization task (Supplemental Figure S1). Point landmarks, semilandmark curves, and linear measurements are all supported. The software is available at <https://github.com/jonchang/eol-mturk-landmark>.
 
-We developed an application that runs completely on the user's local web browser. This simplifies the infrastructure challenge of needing to serve many crowdsdourced workers simultaneously. The web application is configured with a simple JavaScript Object Notation (JSON) file that describes the landmarks necessary to complete an image digitization task (for more details, see Supplementary Material).
-
-Although digitizing and landmarking a single image [microtasks *sensu* @Good2013] is most effective for high-throughput work on MTurk, it is unsuitable for conducting controlled experiments. To solve this issue we created a server-side application backend that automatically distribute tasks according to a configurable set of images and experimental protocol. This application also mimics an official Amazon Mechanical Turk endpoint, to decouple the experimental backend from the image landmarking frontend. External non-MTurk workers can also participate in the same experiment, ensuring effective comparisons across these groups. The software is open source and uses PHP and SQLite, and can be installed on nearly all web hosting services (<https://github.com/jonchang/fake-mechanical-turk>). 
+Although digitizing and landmarking a single image [microtasks *sensu* @Good2013] is effective for high-throughput work on MTurk, it is unsuitable for conducting controlled experiments. To solve this issue we also created a server-side application backend that automatically distributes tasks according to a configurable set of images and experimental protocol. This application mimics an official Amazon Mechanical Turk interface endpoint, to facilitate drop-in replacement for an existing MTurk workflow. External non-MTurk workers can also participate in the same experiment, ensuring consistent comparisons across separate groups. The software is available at <https://github.com/jonchang/fake-mechanical-turk>.
 
 ## Reliability analysis
 
-Collecting landmark-based geometric morphometric data at scale permits detailed analysis of different sources of error, such as among- and within-observer variation [@VonCramon-Taubadel2007]. To assess whether the quality of data gathered by workers recruited through Amazon Mechanical Turk was significantly different than traditionally-collected data, we asked both turkers and experts to landmark a set of 5 fish images, 5 times each. All participants used the same protocol and same software to digitize the same set of fishes.
+Collecting landmark-based geometric morphometric data at scale permits detailed analysis of different sources of error, such as among- and within-observer variation [@VonCramon-Taubadel2007]. To assess whether the quality of data gathered by workers recruited through Amazon Mechanical Turk was significantly different than traditionally-collected data, we asked turkers ($n = `r nrow(filter(fish_reliability, role == "turker") %>% distinct(sha1mac))`$) and experts ($n = `r nrow(filter(fish_reliability, role == "morphologist") %>% distinct(sha1mac))`$) to landmark a set of five fish images, five times each. All participants used the same protocol and same software to digitize the same set of fishes. The landmarks were carefully selected based on previously-published literature concerning fish shape [Supplemental Figure S2; @Fink1995; @Cavalcanti1999; @Ruber2001a; @Klingenberg2003; @Chakrabarty2005; @Frederich2008; @Claverie2014; @Thacker2014]. We also ensured that the chosen landmarks included morphological features that were relatively straightforward to digitize (the position of the eye) and features that were likely to be more challenging to digitize (the position of the preopercle bone), in order to test for turker and expert differences over a spectrum of difficulties. We report the inter-observer reliability for turkers and experts by computing the ratio of the among-individual and the sum of the among-individual and measurement error variance components in a repeated measures nested MANOVA [@Palmer1986; @Zelditch2012].
 
-The landmarks were chosen according to previously-published literature concerning fish shape [@Fink1995; @Cavalcanti1999; @Ruber2001a; @Klingenberg2003; @Chakrabarty2005; @Frederich2008; @Thacker2014], and included landmarks both easy to digitize, such as the anterior margin of the eye, and challenging to digitize, such as the opercular series. We used 5 replicate measurements per worker per image to quantify measurement error within and among observers [@Palmer1986] using *geomorph* `r citep(citation("geomorph"))`.
+To assess the differences between turker and experts on a per-landmark basis, we first compared the median turker position to the median expert position of each landmark. We assumed that the expert median was the true position of that landmark, and calculated the absolute Euclidian distance. Larger distances would indicate low turker accuracy, while smaller distances would indicate high turker accuracy. We then examined the variance in turker landmarks. For each landmark, we rotated the cloud of points to maximize variance in one dimension, and calculated the log-ratio of median absolute deviations (MAD) between turkers and experts. This rotation is a conservative approach for assessing the difference in variance between these two groups, because it maximizes any apparent differences in landmark position. A positive log-ratio indicated that experts had lower variance than turkers, while a negative log-ratio indicated that turkers had lower variance. For all subsequent analysis, we excluded landmarks where turkers performed especially poorly, where either the accuracy or precision components for a given landmark exceeded 1.5 times the interquartile range of that component.
 
-We used the median shape of the combined experts' data as the "true" shape for all comparisons. To assess the accuracy of worker data, as compared 
+To determine whether turkers and experts were statistically distinguishable, we performed a non-parametric MANOVA using the randomized residual permutation procedure (RRPP) with 1,000 iterations [@Collyer2014]. The RRPP method reduces the effect of the "curse of dimensionality" ($p >> n$, where the number of predictors greatly exceeds the number of observations), a common problem in geometric morphometrics, and has been shown to have increased statistical power compared to a method where the raw data are randomized instead [@Anderson2003]. 
+We test for a difference between mean turker and expert shapes against a null model of no difference between turker and expert changes, taking into account species-specific differences. 
+A difference between models was considered significant if the p-value was less than $\alpha = 0.05$.
 
-To assess the differences between turker and expert data, we compared the median turker position to the median expert position of each landmark. We assumed that the expert median was indeed the true position of that landmark, and calculated the absolute Euclidian distance. Larger distances would indicate low turker accuracy, while smaller distances would indicate high turker accuracy. We also examined the variance in turker landmarks. For each landmark, we rotated the cluster of points and took calculated the median absolute deviation between points along a single dimension. This 
+As a separate test, we use linear discriminant analysis [LDA, @Ripley1996], a statistical classification algorithm that finds features to differentiate between different classes of data, in this case turkers and experts. We assessed the accuracy of the LDA classification using 10-fold cross validation (CV), which splits our data into 10 equally-sized groups, using nine for training and one for validation [@Kohavi1995; @Hastie2009]. An acceptable misclassification rate varies depends on application, but here we use a 25% misprediction rate as a standard for sufficient accuracy. This is a highly forgiving standard, since a 50% misprediction rate is no better than a coin flip, and a 25% misprediction rate would still erroneously classify one in four turkers as experts or vice versa. We also use quadratic discriminant analysis (QDA), which relaxes some of the assumptions of LDA, and similarly report the QDA misclassification rate.
 
-To assess within-individual variation, we compared each worker's shape replicate to their own median shape. To assess within-group and between-group variation, we also compare those individual worker median shapes to the median shape of all other turkers and all other experts. We also used the median absolute deviation (MAD) as a dispersion statistic for within-worker, within-group, and between-group comparisons. This is a statistic robust to outliers
-
-The curse of dimensionality is a common problem in machine learning, where $p$, the number of predictors, greatly exceeds $n$, the number of observations. Geometric morphometric datasets are typically extremely highly dimensional, with $2 * k - 1$ observations per 2D landmark. To reduce the dimensionality of our dataset, we orthogonalize our features used a generalized Procrustes superimposition as implement in the R package geomorph. We then use logistic regression on the PC axes, starting with PC1 and adding each subsequent axis in a stepwise fashion. We validate each model using $K$-fold cross-validation, which splits the data into $K$ equally sized groups, using $K-1$ groups to train the model and the last group to validate the model. This process is repeated for each subset of the groups. We set $K=10$ to validate the model, for its balanced statistical properties [@Kohavi1995; @Hastie2009]. Using 10-fold CV, we calculated the confusion matrix for each model in turn, and plot the sensitivity vs specificify (also known as the receiver operator characteristic curve).  
-
-To reduce the effect of the curse of dimensionality ($p >> n$, where the number of predictors  exceeds the number of observations), we first
-
-<!-- (XXX: Talk about setting the consensus morphologist shape as the "true" shape in terms of determining accuracy / precision of individual workers and the consensus turker shape) -->
-
-To determine whether turkers and experts were statistically distinguishable, we used the machine learning technique linear discriminant analysis [LDA, @Ripley1996] as implemented in *MASS* `r citep(citation("MASS"))`. A common error in assessing the efficacy of machine learning methods is training the model and then testing the model using the same data set for both. The researcher can make the model increasingly sophisticated to better fit the training dataset, but be unable to make accurate inferences to real-world data, due to overfitting. Conversely, withholding too much data for validation results in underfitting and the inability of the model to generalize its predictions to real data. To guard against these potentially misleading inferences, we used $K$-fold cross-validation (CV), which splits our data into $K$ equally-sized groups, using $K-1$ for training and $1$ for validation, and tests the model for all possible permutations of these groups. We used a value of $K=10$ to validate the LDA model, for its balanced approach to the bias-variance tradeoff [@Kohavi1995; @Hastie2009]. Using 10-fold CV, we assessed the LDA model's misprediction rate. Acceptable misprediction rates vary depending upon the application, here we judge 20% misprediction rate to sufficently distinguish turkers and experts, while a 50% or higher rate is no better than a random guess. We also used quadratic discriminant analysis (QDA), to test the robustness of our results with a different model. All analyses were performed in R `r citep(citation())`. (XXX: How to interpret the result of this method. Use R package caret for easier comparisons among different machine learning techniques. Try out support vector machines.)
-
-We calculated the per-digitizer median shape for each image used, as well as the consensus turker and morphologist landmarks, and projected these shapes into Procrustes space. We calculated the 95% confidence ellipse to estimate the uncertainty around these shape estimates. (XXX: How to interpret the result of this method)
+We calculated the per-individual median shape for each species used, as well as the consensus turker and morphologist shapes, and projected these shapes into Procrustes space, to visualize the orthogonalized differences in median shape among and between the types of digitizers.
 
 ## Example: a phenomic pipeline for comparative phylogenetic analysis
 
-A common strategy in fish comparative studies is to examine evolutionary dynamics within a single family (XXX: cite more papers that do this) [@Frederich2013; @Thacker2014], potentially due to the extensive amount of time necessary to collect data.
+A common strategy in fish comparative studies is to examine evolutionary dynamics within a single family [@Ferry-Graham2001a; @Alfaro2005; @Alfaro2007; @Rocha2008; @Hernandez2009; @Dornburg2011; @Sorenson2013; @Santini2013; @Frederich2013; @Claverie2014; @Thacker2014], potentially due to the extensive amount of time necessary to collect data. 
+To test whether our method can improve on the case where the data collection method is geometric morphometrics, we use the average time it took an expert to measure a single fish image and predict the time it would take for a single individual expert to measure all images at 5x replication, and compare it to the time it took turkers to collect these measurements at the same replication level. If the turkers in aggregate annotated images more quickly than a single expert would have, this suggests that the parallelization afforded by crowdsourcing is effective at reducing the total time required for data collection. 
 
-To demonstrate the utility of obtaining comparative data using this method, we downloaded previously-published phylogenies for 7 fish families (Acanthurdiae, Apogonidae, Balistidae, Chaetodontidae, Labridae, Pomacentridae, and Tetraodontidae) from TreeBASE and Dryad (XXX: CITE TREES -- need to get info from Mike) and matched them to left-lateral images from the Encyclopedia of Life (<http://eol.org/>) using the EOL API [@Parr2014]. If there were multiple images for a single species, we manually selected the best one. Crowdsourced workers collected body shape data following a standard protocol (Supplementary Material). We then determined the major components of shape variation using a Procrustes-aligned principal components analysis (PCA) [@Mardia1979; @Bookstein1991] as implemented in the R package *geomorph* `r citep(citation("geomorph"))`.
+To demonstrate the utility of obtaining comparative data using this method, we use previously published phylogenies for seven fish families: Acanthuridae [@Sorenson2013], Balistoidae, Tetraodontidae [@Santini2013], Apogonidae, Chaetodontidae, Labridae [@Cowman2011; @Choat2012], and Pomacentridae [@Frederich2013]. We matched `r nrow(distinct(fish_families, tip))` species to left-lateral images from the Encyclopedia of Life (<http://eol.org/>) using their application programming interface [@Parr2014]. Crowdsourced workers placed landmarks describing body shape variation following a standard protocol (Supplementary Material). The Cartesian position of these landmarks were used in a generalized Procrustes analyses [@Gower1975; @Rohlf1990], which centers, scales, and rotates landmark configurations to minimize the least-squares distance between shapes. We then determined the major components of shape variation using a Procrustes-aligned principal components analysis (PCA) [@Mardia1979; @Bookstein1991] with the R package *geomorph* `r citep(citation("geomorph"))`, and used these principal components axes for subsequent analyses.
 
-To test whether our method can improve on the case where the data collection method is geometric morphometrics, we use the average time it took an expert to measure a single fish image and predict the time it would take for a single individual expert to measure our 7 fish families with 5 replicates, and compare it to the time it actually took turkers to collect these measurements at the same replication level. If the turkers in aggregate annotated images more quickly than a single expert would have, this suggests that the parallelization afforded by crowdsourcing is effective at reducing the time required for data collection. 
+We used Bayesian Analysis of Macroevolutionary Mixtures [BAMM; @Rabosky2014a] to estimate rates of speciation and body shape evolution for all seven families. For the characters describing body shape, we use the PC axes whose eigenvalues exceeded the corresponding random broken-stick component [@Jackson1993; @Legendre1998]. BAMM estimates the location of rate shifts in either diversification or character evolution using a transdimensional (reversible jump) Markov Chain Monte Carlo method that samples a variety of models of lineage diversification and trait evolution. We assessed convergence and mixing using Tracer [@rambaut2007tracer]. We also repeated each analysis and simulated under the prior (without data) to exclude rate heterogeneity that occurred solely due to stochastic processes. We use a Bayes Factor criterion of $BF > 5$ to enumerate the set of credible shifts [@Shi2015] and visualized them in R using BAMMtools `r citep(citation("BAMMtools"))`.
 
-We used Bayesian Analysis of Macroevolutionary Mixtures [*BAMM*, @Rabosky2014a] to estimate the diversification rate as well as the rate of morphological evolution, retaining the PC axes whose eigenvalues exceeded the corresponding random broken-stick component [@Jackson1993; @Legendre1998], for each of the 7 families. BAMM estimates the location of rate shifts in either diversification or character evolution using a transdimensional (reversible jump) Markov Chain Monte Carlo method, where the number of rate regimes on a phylogeny is allowed to vary. We assessed convergence and mixing using Tracer [@rambaut2007tracer]. We then used BAMMtools `r citep(citation("BAMMtools"))` to detect whether body shape affects change in the speciation or extinction rate. State-dependent diversification has often been invoked  to explain the high species richness enjoyed by certain lineages [@Mitter1988; @Barraclough1998]; this pipeline demonstrates a largely-automated way to detect these. `r citep(bibentry(bibtype="Article", title="A robust semi-parametric test for detecting trait-dependent diversification", author=c("Daniel L. Rabosky", "Huateng Huang"), year="in.review", journal="Systematic Biology"))`
-	
 # Results
 
 <!--
@@ -167,10 +162,39 @@ State the results, drawing attention to important details in tables and figures
 
 ## Reliability analysis
 
+```{r geomorph_repeatability, warning=FALSE}
+only_good_points <- fish_reliability %>% filter(role != "student", !mark %in% c("A3", "A4", "D3", "D4", "O1", "O2", "O3","O4","O5", "P3", "P4"))
+reliability <- list()
+
+res <- only_good_points %>% gpa_with_vectors(family, role, sha1mac, sequence)
+vec <- res$vectors %>% group_by(family, sha1mac) %>% mutate(sequence = row_number(sequence))
+full_model <- procD.lm(res$coords ~ vec$family + vec$family:vec$sha1mac:vec$sequence, iter = 1)
+reliability$all <- ((full_model$MS[1] - full_model$MS[2])/5) / (full_model$MS[2] + ((full_model$MS[1] - full_model$MS[2])/5))
 
 
+res <- only_good_points %>% filter(role == "turker") %>% gpa_with_vectors(family, role, sha1mac, sequence)
+vec <- res$vectors %>% group_by(family, sha1mac) %>% mutate(sequence = row_number(sequence))
+full_model <- procD.lm(res$coords ~ vec$family + vec$family:vec$sha1mac:vec$sequence, iter = 1)
+reliability$turker <- ((full_model$MS[1] - full_model$MS[2])/5) / (full_model$MS[2] + ((full_model$MS[1] - full_model$MS[2])/5))
 
-```{r turker_v_expert, fig.cap="Test figure caption", anchor="figure"}
+res <- only_good_points %>% filter(role == "morphologist") %>% gpa_with_vectors(family, role, sha1mac, sequence)
+vec <- res$vectors %>% group_by(family, sha1mac) %>% mutate(sequence = row_number(sequence))
+full_model <- procD.lm(res$coords ~ vec$family + vec$family:vec$sha1mac:vec$sequence, iter = 1)
+reliability$expert <- ((full_model$MS[1] - full_model$MS[2])/5) / (full_model$MS[2] + ((full_model$MS[1] - full_model$MS[2])/5))
+
+res <- fish_reliability %>% filter(role == "morphologist") %>% gpa_with_vectors(family, role, sha1mac, sequence)
+vec <- res$vectors %>% group_by(family, sha1mac) %>% mutate(sequence = row_number(sequence))
+full_model <- procD.lm(res$coords ~ vec$family + vec$family:vec$sha1mac:vec$sequence, iter = 1)
+reliability$expert_all <- ((full_model$MS[1] - full_model$MS[2])/5) / (full_model$MS[2] + ((full_model$MS[1] - full_model$MS[2])/5))
+
+res <- fish_reliability %>% filter(role == "turker") %>% gpa_with_vectors(family, role, sha1mac, sequence)
+vec <- res$vectors %>% group_by(family, sha1mac) %>% mutate(sequence = row_number(sequence))
+full_model <- procD.lm(res$coords ~ vec$family + vec$family:vec$sha1mac:vec$sequence, iter = 1)
+reliability$turker_all <- ((full_model$MS[1] - full_model$MS[2])/5) / (full_model$MS[2] + ((full_model$MS[1] - full_model$MS[2])/5))
+rm(vec, res, full_model)
+```
+
+```{r turker_v_expert, fig.cap="Per-family breakdown of accuracy vs. precision for each landmark. Accuracy is represented as the difference between the median turker location for that landmark and the median expert location, with the expert location assumed to be the true location. Precision is represented as the log-ratio of median absolute deviations between turkers and experts. More positive numbers indicate better expert precision, whereas more negative numbers indicate better turker precision. Points highlighted in red are those determined to be outliers (1.5 $\times$ IQR). See Supplemental Information for a labeled version of this figure.", anchor="figure", message=FALSE, warning=FALSE}
 no_st <- fish_reliability %>% filter(role != "student") %>% mutate(role = factor(role))
 
 accuracy <- no_st %>% group_by(family, mark) %>% summarise(median = dist_2d(x, y, role)) %>% group_by(family) %>% mutate(outlier=upper_outlier(median, extreme = 2))
@@ -183,98 +207,111 @@ full_family <- data_frame(
   full_family=c("Acanthuridae", "Apogonidae", "Balistidae", "Chaetodontidae", "Gobiidae", "Labridae", "Pomacentridae", "Scorpaenidae", "Tetraodontidae")
 )
 
-all_stats <- left_join(accuracy, precision) %>% left_join(full_family) %>% mutate(outlier_label = ifelse(outlier, as.character(mark), NA))
+all_stats <- left_join(accuracy, precision) %>% mutate(outlier_label = ifelse(outlier, as.character(mark), NA))
 
-ggplot(all_stats, aes(median, mad, color=outlier)) + geom_point() + labs(x="Accuracy", y="Precision: log2 turker variance / expert variance ") + facet_wrap(~full_family)# + geom_dl(aes(label=outlier_label), size=1, list("top.bumptwice", dl.trans(y=y+0.1), cex=0.75)) + scale_color_manual(values=c("black", "red")) + ylim(-max(abs(all_stats$mad) + 0.25), max(abs(all_stats$mad) + 0.25)) + theme("legend.position" = "none")
+ggplot(all_stats, aes(median, mad, color=outlier)) + geom_point() + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance / expert variance ") + facet_wrap(~family) + scale_color_manual(values = c("black", "red")) + theme_bw() + theme(legend.position="none") + xlim(0, 230)
+ggsave("turker_precision.pdf", width=14, height=14, scale = 1/3)
+
+
+# ggplot(highlighted, aes(median, mad)) + geom_point(color = "white") + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance ? expert variance ") + theme_black() + theme(legend.position = "none") + xlim(0, 130)
+# ggsave("turker_precision_black.pdf", width=14, height=14, scale = 1/3)
+# 
+# 
+# highlighted <- all_stats %>% mutate(should_color = family == "Tetraodontidae" & str_detect(mark, "O"))
+# 
+# ggplot(highlighted, aes(median, mad, color=should_color, label=mark)) + geom_point() + geom_text(data = filter(highlighted, should_color) %>% mutate(median = median + 4, mad = mad + 0.2)) + scale_color_manual(values = c("gray80", "red")) + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance ? expert variance ") + theme_black() + theme(legend.position = "none") + xlim(0, 130)
+# 
+# ggsave("turker_precision_black_puffers.pdf", width=14, height=14, scale = 1/3)
+# 
+# highlighted <- all_stats %>% mutate(should_color = family == "Chaetodontidae" & str_detect(mark, "[AD]3"))
+# 
+# ggplot(highlighted, aes(median, mad, color=should_color, label=mark)) + geom_point() + geom_text(data = filter(highlighted, should_color) %>% mutate(median = median + 4, mad = mad - 0.2)) + scale_color_manual(values = c("gray80", "red")) + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance ? expert variance ") + theme_black() + theme(legend.position = "none") + xlim(0, 130)
+# 
+# ggsave("turker_precision_black_chaets.pdf", width=14, height=14, scale = 1/3)
+# 
+# highlighted <- all_stats %>% mutate(should_color = family == "Balistidae" & str_detect(mark, "D[12]"))
+# 
+# ggplot(highlighted, aes(median, mad, color=should_color, label=mark)) + geom_point() + geom_text(data = filter(highlighted, should_color) %>% mutate(median = median + 4, mad = mad - 0.2)) + scale_color_manual(values = c("gray80", "red")) + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance ? expert variance ") + theme_black() + theme(legend.position = "none") + xlim(0, 130)
+# 
+# ggsave("turker_precision_black_triggers.pdf", width=14, height=14, scale = 1/3)
+# 
+# 
+# highlighted <- all_stats %>% mutate(should_color = median > 10)
+# 
+# ggplot(highlighted, aes(median, mad, color=should_color, label=mark)) + geom_point() + geom_text(data = filter(highlighted, should_color) %>% mutate(median = median + 4, mad = mad - 0.2)) + scale_color_manual(values = c("gray80", "red")) + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance ? expert variance ") + theme_black() + theme(legend.position = "none") + xlim(0, 130)
+
+
+# + geom_dl(aes(label=outlier_label), size=1, list("top.bumptwice", dl.trans(y=y+0.1), cex=0.75)) + scale_color_manual(values=c("black", "red")) + ylim(-max(abs(all_stats$mad) + 0.25), max(abs(all_stats$mad) + 0.25)) + theme("legend.position" = "none")
 ```
 
 
+For nearly all landmarks, turkers only differ from the expert consensus by a few tens of pixels (Figure `r figr("turker_v_expert")`, Supplemental Figure S3). The most accurate and precise points are those that are related to the position of the eye (landmarks E1 and E2). The least accurate are those in the opercular series (O1-O5), particularly the ones related to the preopercle (O1-O3) likely because in certain groups (e.g., Tetraodontidae) the preopercle is difficult to visualize from external morphology alone. Experts were generally more precise than turkers, however there were some landmarks where the turkers converged on very similar locations. Based on these results we exclude in subsequent analyses the landmarks relating to the distal margins of all fins (A3, A4, P3, P4, D3, D4), the preopercle bones (O1-O3), the dorsal fin for triggerfishes (D1, D2), and the opercular opening for pufferfishes (O4-O5), due to low turker accuracy.
+
+The inter-observer reliability of turkers and experts as measured by the ratio of among-individual and sum of the among-individual and measurement error ANOVA components was `r percent(reliability$turker)` and `r percent(reliability$expert)`, respectively. Although there is no current standard for acceptable levels of measurement reliability [@VonCramon-Taubadel2007], these percentages are not low enough to suggest pathologies in the measurement protocol.
 
 
+```{r geomorph_lm, warning=FALSE}
+res <- gpa_with_vectors(only_good_points, family, role, sha1mac)
 
-```{r geomorph_lm, eval=FALSE}
-fmted <- format_for_gpagen(no_st)
-allsplit <- str_split_fixed(dimnames(fmted)$id, "_", 3)
-family_vec <- allsplit[, 1]
-role_vec <- allsplit[, 2]
-ind_vec <- allsplit[, 3]
-gpaed <- gpagen(fmted, ShowPlot=F)
+family <- res$vectors$family
+role <- res$vectors$role
 
-role_by_ind <- procD.lm(gpaed$coords ~ family_vec * role_vec * ind_vec, iter=999, RRPP=T)
-ind_only <- procD.lm(gpaed$coords ~ family_vec:ind_vec, iter=999, RRPP=T)
-
-
-advanced.procD.lm(gpaed$coords ~ ind_vec,  ~ role_vec * ind_vec, ~ family_vec, iter=499)
+lm_result <- advanced.procD.lm(res$coords ~ family * role, ~ family)
+lm_p <- lm_result$P[2]
+lm_Z <- lm_result$Z[2]
+lm_F <- lm_result$F[2]
+rm(family, role)
 ```
-
-
-```{r median_tbl, eval=F, results="asis", anchor="table", fig.cap="Median table"}
-med_wide <- meds %>% spread(key=family, value=value)
-med_wide %>% knitr::kable(digits = 2, caption = "Median table")
-```
-
-```{r mad_tbl, eval=F, results="asis", anchor="table", fig.cap="MAD table"}
-mad_wide <- mads %>% spread(key=family, value=value)
-mad_wide %>% knitr::kable(digits = 2, caption="MAD table")
-```
-
-
-
-
-
-We compare the difference in accuracy and precision between turkers and experts in Figure `r figr("turker_v_expert")`. 
-
-The most accurate and precise points are those that are related to the position of the eye (landmarks E1 and E2). The least accurate are those in the opercular series (O1-O5), particularly the ones related to the preopercle (O1-O3) as well as in species where the preopercle is difficult to visualize from external morphology alone (e.g., Tetraodontidae). We also plot the median difference and the 
-
 
 ```{r cv_table, results="asis", anchor="table", message=FALSE}
-
-subsamp <- group_by(no_st, family, role) %>% sample_n(size=400) %>% ungroup()
+subsamp <- fish_reliability %>% filter(role !="student") %>% group_by(family, role) %>% sample_n(size=400) %>% ungroup() %>% mutate(role = factor(role))
 
 CV <- subsamp %>% group_by(family) %>% do(estimator = errorest(role ~ mark:x + mark:y, data=., model=lda, estimator="cv", est.para = control.errorest(k=10), predict=ip.lda))
 
-CV_sum <- CV %>% summarise(family=family, error=estimator[["error"]]) %>% separate("family", "family", sep="_", extra="drop")
+CV_sum <- CV %>% summarise(family=family, error=estimator[["error"]])
 
 CV <- subsamp %>% group_by(family) %>% do(estimator = errorest(role ~ mark:x + mark:y, data=., model=qda, estimator="cv", est.para = control.errorest(k=10), predict=ip.lda))
 
-CV_sum2 <- CV %>% summarise(family=family, qda_error=estimator[["error"]]) %>% separate("family", "family", sep="_", extra="drop")
-
-CV_sum <- left_join(CV_sum, CV_sum2) %>% left_join(full_family, by="family")
+CV_sum2 <- CV %>% summarise(family=family, qda_error=estimator[["error"]]) 
 
 # format for display
-CV_sum %>% transmute(`Family`=full_family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image.")
+CV_sum %>% left_join(CV_sum2) %>% transmute(`Family`=family, `LDA`=error, `QDA`=qda_error) %>% knitr::kable(digits=3, caption="Misprediction rate of linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA) with 10-fold cross validation for each fish image. The discriminant model for each family was unable to meet the standard of one in four misclassifications, and in some cases, the more flexible QDA method performed worse than the LDA model.")
 ```
 
-Both linear and quadratic discriminant analysis with 10-fold cross validation (Table `r figr("cv_table")`) was unable to reliably distinguish between morphologists and crowdsourced workers using our acceptable misprediction threshold of 20%. 
+
+
+The non-parametric MANOVA with RRPP failed to detect a significant difference between turker and expert shapes ($p = `r lm_p`$, $Z = `r lm_Z`$, $F=`r lm_F`$). Similarly, both linear and quadratic distriminant analysis with 10-fold cross validation (Table `r figr("cv_table")`) were unable to reliably distinguish between these two groups, for any given family. Although for some images the classifier showed slight improvement beyond a 50% coin flip, in all cases our model fell short based on a one in four (25%) acceptable misclassification rate. We conclude that, for any given sample of landmarks, it is challenging to statistically distinguish between expert-provided and turker-provided landmark configurations.
 
 
 
-
-
-```{r turk_morph_procrustes_space, fig.cap="Turker morpho space", anchor="figure"}
+```{r turk_morph_procrustes_space, fig.cap="Morphospace projection for each observer's mean shape. Blue points indicate experts, while red points indicate turkers. The mean shape for all turkers and experts for a given family is the point outlined in black for each family, and connected with a black line to help emphasize the difference between turker and expert mean shapes. The convex hull for each family is drawn to show the amount of among-observer shape variation.", anchor="figure"}
 # Load data from the anonymized results file, remove students, drop bad marks
 df <- fish_reliability %>%
 	filter(role != "student") %>% 
-	separate(col=mark, into=c("cat", "cat_seq"), sep=1, remove=F, convert=T) %>%
-	filter(!(family %in% c("Bal") & mark %in% c("D1","D2")), !mark %in% c("O1","O2","O3","O4","O5", "A3", "D3", "D4"))
+	filter(!mark %in% c("O1","O2","O3", "A3", "A4", "D3", "D4", "P3", "P4"))
 
 # grabs the consensus sequence by person and fish
 df <- df %>% group_by(family, mark, role, sha1mac) %>% summarise(x=median(x), y=median(y))
+#df <- df %>% group_by(family, mark, role, sha1mac, sequence)
 
-coords <- gpagen(format_for_gpagen(df), ShowPlot=F)$coords
+coords <- gpagen(format_for_gpagen(df, family, role, sha1mac, sequence), ShowPlot=F)$coords
 
-plot_tangent_space(pca_df(coords), "PC1", "PC2")
+#plot_tangent_space(pca_df(coords), "PC1", "PC2")
+#plot_tangent_space(pca_df(coords), "PC3", "PC4")
+
+# exclude D1 & D2 for triggers, O4 and O5 for puffers
+
+df <- df %>% filter(!(family == "Balistidae" & mark %in% c("D1", "D2")), !(family == "Tetraodontidae" & mark %in% c("O4", "O5")))
+coords <- gpagen(format_for_gpagen(df, family, role, sha1mac, sequence), ShowPlot=F)$coords
+
+turk_morph_pca <- pca_df(coords) %>% separate(id, c("family", "role", "ind", "seq"), sep = "_")
+
+write_csv(turk_morph_pca, "turk_morph_pca_for_supplement.csv")
+
+plot_tangent_space(turk_morph_pca, "PC1", "PC2")
 ```
 
-
-
-
-Post text 
-
-
-
-
-```{r brokenstick}
+```{r brokenstick_reliability}
 # use broken stick method to get the principal components stopping point
 
 pc_res <- prcomp(two.d.array(coords))
@@ -284,40 +321,11 @@ bstick_res <- bstick(pc_res)
 stopping_pc <- which(eigen_res < bstick_res)[1] %>% as.numeric
 ```
 
-We analyzed PC 1 through PC `r stopping_pc`, based on the broken-stick method of determining a PCA stopping point. Projecting consensus shapes into Procrustes space (Figure `r figr("turk_morph_procrustes_space")`) shows that within-group variation exceeds that of among group variation. The consensus turker shape and consensus expert shape are nearly identical for 5 of 7 families on PC1 and PC6 (Figure `r figr("turk_morph_procrustes_space")`, S1 and S2). 
+We projected turker and expert shape configurations into morphospace (Figure `r figr("turk_morph_procrustes_space")`, Supplemental Figure S4) Although the overall space occupied by each family's shape configurations vary, in practice, the aggregated median turker and expert shapes are not qualitatively different. The only exception is the triggerfishes (Balistidae), likely due to turker confusion over the exact location of dorsal fin due to their reduced anterior dorsal fin.
 
 ## Phenomic pipeline for comparative phylogenetic analysis
 
-XXX: Include BAMM speciation / morphological evolution analysis. 
-
-
-
-```{r sevenfamily_tangent_plot, message=F, warning=F, fig.show="hold", fig.cap="Family figures", anchor="figure"}
-df <- fish_families %>% group_by(tip, mark, family) %>% summarise(x=median(x), y=median(y))
-
-splut <- gather(df, variable, val, x:y) %>% unite(id, family, tip, sep="|")
-
-res <- xtabs(val ~ mark + variable + id, data=splut)
-
-groups <- str_match(dimnames(res)$id, "(.*)\\|")[, 2] %>% factor %>% as.numeric
-
-full_coords <- gpagen(res, ShowPlot=F)$coords
-
-pcaed <- pca_df(full_coords) %>% separate(id, into=c("family", "name"), sep="\\|", extra="drop")
-
-pcaed %>% select(name, PC1) %>% write.table(file="lol.txt", quote=F, row.names=F, col.names=F, sep="\t")
-
-plot_tangent_space2(pcaed, labelmethod=list("chull.grid"))
-```
-
-
-asdfsdf
-
-
-
-
-
-```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received 8 minutes after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark.", anchor="figure"}
+```{r timing_plot, fig.cap="Line plot showing time to receive results for any given image (x axis) and the total fraction of the data set received (y axis). Landmarks were first received eight minutes after creation of the Amazon MTurk task, and at least one replicate was received for every image at the 80 minute mark.", anchor="figure"}
 # median time (in minutes) it takes an expert to measure these fishes
 timings <- (no_st %>% group_by(role) %>% summarise(duration=median(duration))) %>% mutate(total_time=duration * nrow(no_st))
 
@@ -332,107 +340,279 @@ total_turker_time <- max(fish_families$time_taken) %>% as.numeric %>% dminutes %
 ```
 
 
+Using a median expert time of `r as.character(morpho_per_image)` per image, we estimate that a single morphologist would take `r as.character(morpho_per_image * nrow(distinct(fish_families, tip)))` to landmark all `r nrow(distinct(fish_families, tip))` images. At 5x replication, this would take `r as.character(morpho_per_image * nrow(fish_families))`. By comparison, turkers took a total of `r as.character(total_turker_time)` to complete all images at 5x replication.
 
 
 
-Using a median-expert time of `r as.character(morpho_per_image)` per image, we estimate that a single morphologist would take `r as.character(morpho_per_image * nrow(no_st))` to landmark all `r nrow(no_st)` images. At 5x replication, this would take `r as.character(morpho_per_image * nrow(no_st) * 5)`. By comparison, turkers took a total of `r as.character(total_turker_time)` to complete all images at 5x replication.
 
-The BAMMtools analysis identified areas of each phylogeny that were experiencing faster rates of body shape evolution. XXX: Talk about these in more detail.
+
+```{r sevenfamily_tangent_plot, message=F, warning=F, fig.show="hold", fig.cap="Morphospace for seven families of ray-finned fishes. Each point indicates a separate species; families are separated by colors. The convex hull for each family is drawn to show area of morphospace occupied by each family. Figures for other PC axes are present in the Supplemental Material.", anchor="figure"}
+name_map <- data_frame(family = c("acanthurid", "apogonidae", "balistoidae", "chaetodontidae", "labridae", "pomacentridae", "tetraodontidae"),
+                       pretty_family = c("Acanthuridae", "Apogonidae", "Balistoidae", "Chaetodontidae", "Labridae", "Pomacentridae", "Tetraodontidae")
+)
+
+df <- fish_families %>% group_by(tip, mark, family) %>% summarise(x=median(x), y=median(y))
+
+splut <- gather(df, variable, val, x:y) %>% unite(id, family, tip, sep="|")
+
+res <- xtabs(val ~ mark + variable + id, data=splut)
+
+groups <- str_match(dimnames(res)$id, "(.*)\\|")[, 2] %>% factor %>% as.numeric
+
+full_coords <- gpagen(res, ShowPlot=F)$coords
+
+pcaed <- pca_df(full_coords) %>% separate(id, into=c("family", "name"), sep="\\|", extra="drop")
+
+pcaed %>% select(name, PC1) %>% write.table(file="lol.txt", quote=F, row.names=F, col.names=F, sep="\t")
+
+pcaed <- left_join(pcaed, name_map, by="family") %>% mutate(family = pretty_family)
+write_csv(pcaed, "seven_family_pca_for_supplement.csv")
+
+plot_tangent_space2(pcaed, labelmethod=list("chull.grid"))
+```
+
+```{r brokenstick_families}
+# use broken stick method to get the principal components stopping point
+
+pc_res <- prcomp(two.d.array(full_coords))
+eigen_res <- pc_res$sdev^2
+bstick_res <- bstick(pc_res)
+
+stopping_pc <- which(eigen_res < bstick_res)[1] %>% as.numeric
+```
+
+
+```{r load_bamm_data, message=FALSE, echo=FALSE, warning=FALSE, results="hide"}
+base <- "data-raw/bamm/"
+base <- "../data-raw/bamm/"
+fams <- c("acanthurid", "apogonidae", "balistoidae", "chaetodontidae", "labridae", "pomacentridae", "tetraodontidae")
+pretty_names <- c("Acanthuridae", "Apogonidae", "Balistoidae", "Chaetodontidae", "Labridae", "Pomacentridae", "Tetraodontidae")
+names(fams) <- pretty_names
+
+tre_trait <- lapply(paste0(base, "input_trees/", fams, ".tre"), read.tree)
+tre_speciation <- lapply(paste0(base, fams, ".tre"), read.tree)
+names(tre_trait) <- names(tre_speciation) <- fams
+
+cl <- makePSOCKcluster(detectCores(), useXDR=F)
+clusterExport(cl, list("base", "fams", "tre_speciation", "tre_trait"))
+evt_speciation <- parLapplyLB(cl, fams, function(fam) {
+  tre <- tre_speciation[[fam]]
+  BAMMtools::getEventData(tre, paste0(base, "div_runs/", fam, "_event_data.txt"), burnin=0.1)
+})
+evt_trait <- parLapplyLB(cl, fams, function(fam) {
+  tre <- tre_trait[[fam]]
+  BAMMtools::getEventData(tre, paste0(base, "trait_runs/", fam, "_PC1_event_data.txt"), burnin=0.1, type="trait")
+})
+names(evt_trait) <- names(evt_speciation) <- fams
+clusterExport(cl, list("evt_speciation", "evt_trait"))
+rtt_speciation <- parLapplyLB(cl, fams, function(fam) {
+  BAMMtools::getRateThroughTimeMatrix(evt_speciation[[fam]])
+})
+rtt_trait <- parLapplyLB(cl, fams, function(fam) {
+  BAMMtools::getRateThroughTimeMatrix(evt_trait[[fam]])
+})
+prior_speciation <- parLapplyLB(cl, fams, function(fam) {
+  BAMMtools::getBranchShiftPriors(tre_speciation[[fam]], paste0(base, "div_runs/", fam, "_prior_probs.txt"))
+})
+prior_trait <- parLapplyLB(cl, fams, function(fam) {
+  BAMMtools::getBranchShiftPriors(tre_trait[[fam]], paste0(base, "trait_runs/", fam, "_PC1_prior_probs.txt"))
+})
+
+names(pretty_names) <- names(prior_trait) <- names(prior_speciation) <- names(rtt_trait) <- names(rtt_speciation) <- fams
+stopCluster(cl)
+```
+
+```{r bamm_plots, message=FALSE, echo=FALSE, warning=FALSE, results="hide", fig.show="hold", anchor="figure", fig.cap="Rates of shape evolution for PC1 (a, b) and speciation (c, d) across seven families of fishes. Phylorate plots (a, c) color branch lengths by rates of shape evolution (a) and speciation (c), where warmer colors indicate faster rates of evolution. Significant rate shift events (pp > 0.95) are indicated on the phylorate plot as a red circle on the corresponding branch. Median log rates of shape evolution (b) and speciation (d) through time, where black lines indicate the background rate and red lines indicate the rate of evolution in a clade experiencing a significant shift in rate, corresponding to red circles in (a) or (c).", fig.height=9.5, out.height="0.9\\textheight", out.width="\\textwidth"}
+
+layout_mat <- matrix(c(
+  0,  1,  2,  3,  4,
+  5,  12, 13, 14, 15,
+  6,  16, 17, 18, 19,
+  7,  20, 21, 22, 23,
+  8,  24, 25, 26, 27,
+  9,  28, 29, 30, 31,
+  10, 32, 33, 34, 35,
+  11, 36, 37, 38, 39
+), ncol = 5, byrow = TRUE)
+
+htext <- function(str) {
+  plot.new()
+  text(0.5, 0.5, str, cex=1)
+}
+vtext <- function(str) {
+  plot.new()
+  text(0.5, 0.5, str, cex=1, srt=90)
+}
+
+customintervals <- list(
+  pomacentridae = c(0.000, 0.0025)
+)
+
+mantissa <- function(x) {
+  sapply(x, function(x) {
+    if (x == 0) 0
+    else {
+      log <- log10(abs(x))
+      10^(log - floor(log))
+    }
+  })
+}
+
+exponent <- function(x) {
+  sapply(x, function(x) {
+    if (x == 0) 0
+    else floor(log10(abs(x)))
+  })
+} 
+
+plot_rtt <- function(rtt, shifts = list(), xlim=NULL, ylim=NULL) {
+  vartype <- if (rtt$type == "trait") "beta" else "lambda"
+  if (length(shifts) > 0) {
+    allshifts <- c(list(rtt), shifts)
+  } else {
+    allshifts <- list(rtt)
+  }
+  allshifts <- lapply(allshifts, function (x) {
+    x$avg <- apply(x[[vartype]], 2, median)
+    x$times <- rev(x$times)
+    x
+  })
+  xlim <- if (is.null(xlim)) range(sapply(allshifts, `[`, "times")) else xlim
+  ylim <- if (is.null(ylim)) range(sapply(allshifts, `[`, "avg")) else ylim
+  old.par <- par(mar = c(2,3,2,1))
+  plot.new()
+  plot.window(rev(xlim), ylim, log = "y")
+  axis(at = axTicks(1), side = 1, labels = axTicks(1))
+  axis(side = 2, las = 2)
+  lines(allshifts[[1]]$times, allshifts[[1]]$avg)
+  if (length(shifts) > 0) {
+    lapply(2:length(allshifts), function (x) {
+      lines(allshifts[[x]]$times - min(allshifts[[x]]$times), allshifts[[x]]$avg, col="red")
+    })
+  }
+  par(old.par)
+  return(invisible(NULL))
+}
+
+mar <- c(2,1,2,1)
+par(mar = c(0,0,0,0))
+layout(layout_mat, widths = c(1, 6, 6, 6, 6), heights = c(0.9, 9, 9, 9, 9, 9, 9, 9))
+htext("Shape Phylorates")
+text(0, 0.5, "a)", cex=1.2)
+htext("Shape Rate Through Time")
+text(0, 0.5, "b)", cex=1.2)
+htext("Speciation Phylorates")
+text(0, 0.5, "c)", cex=1.2)
+htext("Speciation Rate Through Time")
+text(0, 0.5, "d)", cex=1.2)
+lapply(pretty_names, vtext)
+par(mar = mar)
+lapply(fams, function(fam) {
+  interval <- if(is.null(customintervals[[fam]])) c(0, 0.001) else customintervals[[fam]] 
+  q <- plot.bammdata(evt_trait[[fam]], logcolor = F, breaksmethod = "jenks", color.interval = interval)
+  best <- getBestShiftConfiguration(evt_trait[[fam]], prior = prior_trait[[fam]])
+  addBAMMshifts(best, cex = 2, par.reset=F)
+  axisPhylo()
+  
+  shift_node <- getShiftNodesFromIndex(best, 1)
+  if (length(shift_node) > 0) {
+    background_rates <- getRateThroughTimeMatrix(evt_trait[[fam]], node = shift_node, nodetype = "exclude")
+    clade_rates <- lapply(shift_node, function (x) {
+      phy <- extract.clade(tre_trait[[fam]], x)
+      write.tree(phy, file = paste0(fam, "_trait_shift_", x, ".tre"))
+      getRateThroughTimeMatrix(evt_trait[[fam]], node = x)
+      })
+    plot_rtt(background_rates, clade_rates)
+  } else {
+    plot_rtt(rtt_trait[[fam]])
+  }
+  
+  
+  q <- plot.bammdata(evt_speciation[[fam]], logcolor = F, breaksmethod = "jenks", color.interval = )
+  best <- getBestShiftConfiguration(evt_speciation[[fam]], prior = prior_speciation[[fam]])
+  addBAMMshifts(best, cex = 2, par.reset=F)
+  axisPhylo()
+  
+  shift_node <- getShiftNodesFromIndex(best, 1)
+  if (length(shift_node) > 0) {
+    background_rates <- getRateThroughTimeMatrix(evt_speciation[[fam]], node = shift_node, nodetype = "exclude")
+    clade_rates <- lapply(shift_node, function (x) {
+      phy <- extract.clade(tre_speciation[[fam]], x)
+      write.tree(phy, file = paste0(fam, "_speciation_shift_", x, ".tre"))
+      getRateThroughTimeMatrix(evt_speciation[[fam]], node = x)
+      })
+    plot_rtt(background_rates, clade_rates)
+  } else {
+    plot_rtt(rtt_speciation[[fam]])
+  }
+})
+
+```
+
+
+Using the broken-stick method of determining a PCA stopping point, we analyzed PC 1 through PC `r stopping_pc`. We project per-species consensus shapes into Procrustes space (Figure `r figr("sevenfamily_tangent_plot")`, Supplemental Figure S5). The BAMMtools analysis uncovered substantial amounts of heterogeneity in the rate of body shape evolution and speciation in each family (Figure `r figr("bamm_plots")`). Significant shifts in the rate of shape evolution or speciation were detected in three families: Labridae, Apogonidae, and Pomacentridae. The significant shifts in speciation rate corroborate those found in @Cowman2011 through either MEDUSA [@Alfaro2009] or a relative cladogenesis statistic [@Nee1992]. Two significant shifts in shape evolution rate occur in the wrasses (Labridae). The first rate shift occurs deep in the tree, corresponding to the lineage containing the labrine, scarine, and cheiline tribes. The other shift is nested within that group, in *Sparisoma*.  One shift in speciation rate also occurs in the wrasses, encompassing the genera *Chlorurus* and *Scarus*. One shift in speciation rate occurs in the cardinalfishes (Apogonidae), encompassing members of the genera *Apogon*, *Archamia*, *Zoramia*, *Ostorhinchus*, *Cheilodpterus*, *Gossamia*, *Fowleria*, and *Phaeoptyx* [Apogonini + Apogonichthynini *sensu* @Mabuchi2014]. One shift in the rate of shape evolution occurs in the damelfishes (Pomacentridae) in the genus *Amphiprion*.
 
 # Discussion
+
 
 <!--
 Point out the importance of the results and place them in the context of previous studies and in relation to the application of the work (expanding on the Synthesis and applications section of the Summary). Where appropriate, set out recommendations for management or policy.
 -->
 
-XXX: Discuss what people currently do to estimate error in geometric morphometrics. Make the point that this method is really good at getting at an estimate of error.
+<!--
+Distal margin of the fin: would semilandmarks work better?
+-->
 
-We found that for certain landmarks there was significant between and within group disagreement. Based on median average deviation, points belonging to the opercular series and those that concerned the distal margin of the dorsal and anal fins were particularly challenging for turkers to digitize, compared to the experts. Typically, geometric morphometric studies only use a single digitizer in efforts to reduce interdigitizer error. We argue that this common technique is flawed, as it papers over potential differences in how observers measure the same homologous landmark on the same organism. Instead, explicitly accounting for interobsever error is critical to determine the efficacy of each individual landmark and the replicability of the study as a whole. Examining interobserver error is a critical process that signals which landmarks can be relied on and which can be discarded, as we have done in this analysis. Despite the reduction in the amounts of landmark data collected, even a simplified protocol can produce meaningful biological results that are concordant with previous hypotheses in these groups.
+We have shown that crowdsourcing through Amazon Mechanical Turk is a tractable approach for generating reliable trait data at an unprecedented scale. Using this framework, it is possible to distribute thousands of images to workers, collect the data, and send it to a comparative analysis pipeline. We have also demonstrated that it is possible to identify the set of geometric morphometric landmarks that can be reliably captured by nonspecialists. We found that for certain landmarks there was significant between and within group disagreement. Based on median average deviation, points belonging to the opercular series and those that locating the distal margin of the dorsal and anal fins were particularly challenging, compared to the experts. Based on these results, nonspecialist turkers are unlikely to replace experts for all morphometric tasks. However, by digitizing less than 5% of our dataset with experts, we were able to identify groups of landmarks that exhibited extremely poor performance and excluded these. Furthermore, we were able to obtain biologically significant results from a dataset collected entirely by turkers. Through combining expert knowledge with the sheer scale of the Amazon Mechanical Turk workforce, it is possible to collect and assess large quantities of morphometric data, with an order of magnitude improvement in throughput over traditional approaches.
 
-Previous work in generating large phenotypic datasets typically relied on one or more of expertise, effort, and computational power.
-Collecting phenotypic data remains a large bottleneck in our ability to comprehensively test hypotheses about large radiations of organisms. We developed a method to gather phenotypic data using Amazon Mechanical Turk.
-Our results show that the quality of turkers' data are not significantly different from results collected from experts, and that these data can be gathered extremely quickly.
+## Reliability
 
-We attempted to distinguish between turker-generated landmarks and expert-generated landmarks using linear discriminant analysis. Even the image with the lowest misprediction rate, from the family `r filter(CV_sum, min(error) == error)$family`, still incorrectly predicted the digitizer's identity `r filter(CV_sum, min(error) == error)$error %>% as.numeric() %>% scales::percent()` of the time, suggesting that, given a set of landmarks, it is difficult to predict whether a turker or a morphologist created them. The quadratic discriminant analysis did not reliably improve prediction of worker identity over the LDA.
+One advantage of the crowdsourced method we develop here is that inter-observer error can be readily assessed. Traditional geometric morphometric studies often rely on a single observer for practical reasons (the pool of trained geometric morphometricians is limited), and to avoid individually-driven systematic biases in data collection. Although this common practice may reduce bias, it also precludes meaningful assessment of differences among observers. Our results show that inter-observer variance can be substantial for some landmarks even among expert digitizers. Therefore, explicitly accounting for inter-observer error is critical to determine the efficacy of each individual landmark and the replicability of the study as a whole. Inter-observer error signals which landmarks can be relied on and which merit further consideration, as we have done in this analysis. The quantification of inter-observer error is a strict requirement of our workflow, as it would otherwise be impossible to arrive at a single consensus shape across several turkers working independently. This requirement ensures that inter-observer error is not ignored or bypassed due to the difficulty of assessing it.
 
-The traditional way of collecting phenotypic data involves enormous researcher effort and significant morphological expertise. For example, @Brusatte2014 used a 853 character discrete character matrix for 150 taxa to estimate the rate of morphological evolution in the transition from theropod dinosaurs to modern birds. These data were collected over the course of 20 years as part of the Therapod Working Group [@Norell2001; @Clark2002; @Hwang2002; @Hwang2004; @Makovicky2005; @Norell2006; @Turner2007; @Turner2012; @dryad_84t75]. @OLeary2013 combined the work of MorphoBank contributors [@OLeary2011] with literature review to generate 4,541 characters for 86 species. @Rabosky2013 examined 7,822 species of ray-finned fish but used a single quantitative measure (body size) to evaluate correlated speciation and morphological evolution. Newer approaches, typically involving statistical techniques such as machine vision or natural language processing, still require significant researcher expertise in either gathering large training datasets, or to develop new and more sophisticated machine learning models [@Brill2003; @Halevy2009].
+In our analysis, we assessed the quality of a variety of landmarks between turkers and experts. Unsurprisingly, turkers performed exceptionally poorly for several landmarks requiring knowledge of fish anatomy. For example, the landmarks that describe the shape of the fish's caudal fin asked workers to mark the distal tip of the first principal fin ray. Even when turkers are armed with a definition and a comparison between procurrent and principal fin rays, the experts' experience and training allow them to substantially outperform turkers in identifying this point. Furthermore, experts generally had lower disagreement in their landmark placement when compared to turkers, even for landmarks that turkers found especially difficult. These differences between experts and MTurk workers have also been observed in image categorization tasks [@Deng2009; @VanHorn2015]. However, it is possible that an improved training protocol could result in better collection of these difficult landmarks. Turkers have been found to perform well in extremely detailed video annotation tasks [@Vondrick2013], provided that researchers conduct pre-task training and post-task validation. Implementing these pre-task requirements would be a straightforward avenue to improve accuracy for future work.
 
-Our novel pipeline to download images, upload them to Amazon MTurk, and process them using BAMM and BAMMtools showcases the ability to rapidly collect phenotypic data. Most of the time taken to collect these data were spent on waiting for worker results; however, a majority of the data had already been collected at the 1-hour mark. An online methodology could conceivably improve on this analysis time, by iteratively refining its results as new data streamed in from Amazon's servers. (BAMM does not support adding new data mid-analysis). Other speedups could be found, particularly in identifying the best image for each species to use for analysis. This could easily be replaced with a protocol for image selection and uploaded to MTurk for categorization.
+## The role of crowdsourced phenotypic data collection in modern comparative studies
 
-The results of this pipeline also serve to test previous predictions of the rates of cladogenic speciation and mophological evolution [@Rabosky2013]. Body shape and body size are usually correlated (XXX: find the Cite), and the first PC axis of body shape analyses is typically associated with features related to size. (XXX: make an extensive comparision between the results of the nat comm paper and the 7 families here)
+The traditional way of collecting phenotypic data involves enormous researcher effort and significant morphological expertise. For example, @Brusatte2014 used a 853 character discrete character matrix for 150 taxa to estimate the rate of morphological evolution in the transition from theropod dinosaurs to modern birds. These data were collected over the course of 20 years as part of the Therapod Working Group [@dryad_84t75]. @OLeary2013 combined the work of MorphoBank contributors [@OLeary2011] with literature review to generate 4,541 characters for 86 species. @Rabosky2013 examined 7,822 species of ray-finned fish and used a single quantitative measure (body size) collected from FishBase [@Froese2014], whose data are contributed from the scientific literature by experts. All of these studies share the same requirement for intensive researcher effort, but the data collected is generally either broad (many species) or deep (many characters). In this study, we collected a phenotypically rich dataset across great taxonomic breadth. This approach can easily be scaled to permit unprecedented, massive comparative analyses on new, phenotypically rich datasets. 
 
-Our approach hits a "sweet spot" on the three axes of expertise, effort, and computational complexity. We use researcher expertise to identify a comparative hypothesis, and design a data collection protocol to specifically test this hypothesis. Users on Amazon Mechanical Turk supply a large source of worker effort that collects data per our protocol. Finally, computational statistical techniques validate the accuracy of our data and identify outliers and other errors in data collection. Researchers do not have to spend time digitizing collections, workers need not generate biological hypotheses, and biologists will not have to solve open questions in the fields of machine vision and natural language processing in order to answer questions in comparative biology. The task of phenomic-scale data collection is split up and efficiently allocated according to the strengths of each role, without overly relying on any one axis to carry out the entire task.
+This method does not threaten to replace experienced morphologists. Though certain conspicuous landmarks can be rapidly collected by turkers, other types of analyses will require landmarks that can only be identified by experts and thus cannot use the high-throughput method presented here. Although this can likely be alleviated by implementing more sophisticated training regimes, the implicit anatomical knowledge that morphologists have must be made explicit in the form of a written protocol for turkers to follow. The cost of developing a clearer and simpler protocol that still captures the essence of the morphological characters of interest must be weighed against the benefit of higher-throughput from turker data collection, and for many such analyses this tradeoff is impractical. However, for such analyses where crowdsourcing is a viable alternative, our approach allows experts to move beyond data collection and into a role of developing training materials for nonspecialists and validating the data collected by crowdsourced workers.
 
-We stress that our work does not attempt to, and will likely never displace traditional morphological research and data collection. The role of these traditional techinques is critical for generating preliminary hypotheses. Our method instead performs high-throughput collection of phenotypic data to match the current speeds of molecular data collection. Collecting this data is not useful without having in mind a specific hypothesis to test. Our work fills the niche of gathering phenotypic data across large radiations, which is still a challenging open research question. Even seemingly obvious phenotypes, such as the woodiness of plant species, are incomplete and sampled in a biased manner, potentially misleading inference on a global scale [@FitzJohn2014]. We suggest that our method can play a crucial role in increasing the amount of data that can be brought to bear against comparative hypotheses.
+Approaches involving statistical techniques like machine vision and natural language processing have yet to make significant headway in automatically collecting morphological data. Although methods to automatically measure leaves exist [@Corney2012; @Corney2012a], these require 2D specimens to eliminate parallax error, as well as high-contrast mounting paper backgrounds for effective automatic outline detection. More sophisticated methods for lower-quality images or organisms with more 3D structure have yet to be developed. Natural language processing of the scientific literature could potentially be used for automatic extraction of morphological characters using DeepDive [@Peters2014; @Shin2015], but it may require impractically large corpus sizes [@Brill2003; @Halevy2009]. Crowdsourcing can augment and enhance these statistical techniques. For example, the algorithm in @Corney2012 occasionally captures non-leaf objects and systematically underestimates leaf sizes. MTurk workers could improve this method by confirming the presence of a leaf in the image segment and measure the leaf size to ground truth the algorithm's results.
+
+A third alternative to using expert morphologists and crowdsourced workers to collect data is through citizen science. Citizen scientists are enthusiasts that volunteer to collect data or contribute annotations to a scientific endeavor. They can specialize in a particular field, such as birds, plants, or fungi. Compared to Amazon Mechanical Turk workers, citizen scientists are typically unpaid, but can produce higher quality work due to their expertise. For example, a study comparing citizen scientists and MTurk workers showed that for an image segmentation task MTurk workers had higher throughput and comparable accuracy to citizen scientists, but MTurk workers performed poorly when asked to identify birds to the species level [@VanHorn2015].
+
+## Suitability for other systems
+
+Our novel pipeline to download images, upload them to Amazon MTurk, and process them using BAMM and BAMMtools showcases the ability to rapidly collect phenotypic data. Most of the time taken to collect these data were spent on waiting for worker results; however, a majority of the data had already been collected at the 1-hour mark. An online methodology could conceivably improve on this analysis time, by iteratively refining its results as new data streamed in from Amazon's servers.
+
+Although there are limitations in the type and accuracy of data that can be collected through MTurk crowdsourcing, even a simplified protocol can produce meaningful biological results that are concordant with previous hypotheses in these groups. We detected a significant shift in the rate of body shape evolution in Labridae, restricted to the wrasse tribes Labrini, Cheilini, and Scarini. The scarines and cheilines are mostly reef-associated [@Froese2014], which has been proposed as an environment that drives diversification rate changes in marine teleosts [@Alfaro2007; @Cowman2011; @Price2011]. These results suggest that evolution of body form may also be influenced by environmental association [@Claverie2014]. Although the example we present here was necessarily limited, extending this technique to generate new phenotypic datasets for existing large phylogenetic trees such as fishes [@Rabosky2013], birds [@Jetz2012], mammals [@Bininda-Emonds2007], and angiosperms [@Zanne2014] would be straightforward, especially for taxa where image data are already aggregated in a database such as FishBase [@Froese2014] or the Encyclopedia of Life [@Parr2014].
+
+Our approach hits a "sweet spot" on the three axes of expertise, effort, and computational complexity. We use researcher expertise to identify a comparative hypothesis, and design a data collection protocol to specifically test this hypothesis. Amazon Mechanical Turk supplies a large source of worker effort that collects data according to protocol. Finally, computational statistical techniques validate the accuracy of our data and identify outliers and other errors in data collection. Researchers do not have to spend time digitizing collections, workers need not generate biological hypotheses, and biologists will not have to solve open questions in the fields of machine vision and natural language processing in order to answer questions in comparative biology. The task of phenomic-scale data collection is split up and efficiently allocated according to the strengths of each role, without overly relying on any one axis to carry out the entire task.
+
+Our work fills the niche of gathering phenotypic data across large radiations, which has been a challenging open research question [@Burleigh2013]. Even seemingly obvious phenotypes, such as the woodiness of plant species, are incomplete and sampled in a biased manner [@FitzJohn2014], potentially misleading inference on a global scale. This method unlocks the potential of high-throughput data collection, and shifts the data bottleneck for morphological research onto acquiring suitable images for quantification, and developing higher-quality worker training regimens to enable collection of more sophisticated data. The burden is now on experienced taxonomists and morphologists to create protocols that are simple enough to be understood by MTurk workers, but comprehensive enough to test hypotheses of interest across the tree of life. Additionally, museums and other institutions must increase their efforts to make their biodiversity collections available digitally, including images suitable for morphological research. The problem of difficult-to-retrieve *dark data* is well-known [@Heidorn2008], but without either physical access to the collections or an image of the specimen, morphological data is impossible to acquire.
+
+Our results suggest that, where possible, crowdsourcing should be an integral part of any large-scale morphological analysis. Crowdsourcing should play a key role in unlocking the "dark data" present in biodiversity collections by providing a high-throughput way to extract the phenotypic data present in specimens. Furthermore, coordinating efforts from digitizing museum collections, natural language processing and machine vision software, citizen scientists, expert morphologists and taxonomists, and crowdsourced Mechanical Turk workers would result in an extremely powerful pipeline that could generate a "phenoscape" across the tree of life. 
 
 # Acknowledgements
 
-We thank XXX, YYY, and ZZZ for helpful comments on the manuscript, as well as Tina Marcroft, Bruno Frédérich, Vanson Liu, Rosalia Aguilar, Ryan Ellingson, Francesco Pickens, Colette LaRochelle, and the `r (fish_reliability %>% filter(role == "turker") %>% distinct(sha1mac) %>% nrow()) + (fish_families %>% select(worker) %>% distinct() %>% nrow()) ` Amazon Mechanical Turk workers that contributed their time and effort. We also thank Dan Rabosky, Brian Sidlauskas, Matthew McGee, Adam Summers, and Michael Burns for insightful discussions about fish morphology and digitization protocols. Katie Staab, Tonya Kane, and their `r fish_reliability %>% filter(role == "student") %>% distinct(sha1mac) %>% nrow()` undergraduate students served as beta testers for the methods in this study. This work was supported by an Encyclopedia of Life David M. Rubenstein Fellowship (EOL-33066-13), a Stephen and Ruth Wainwright Fellowship, and a UCLA Research and Conference Award to JC. (XXX: Mike's grants?). Travel support to present this research was also provided by the Society for Study of Evolution to JC.
+We thank XXX, YYY, and ZZZ for helpful comments on the manuscript, as well as T. Marcroft, B. Frederich, V. Liu, R. Aguilar, R. Ellingson, F. Pickens, C. LaRochelle, and the `r (fish_reliability %>% filter(role == "turker") %>% distinct(sha1mac) %>% nrow()) + (fish_families %>% select(worker) %>% distinct() %>% nrow()) ` Amazon Mechanical Turk workers that contributed their time and effort. We also thank D. Rabosky, B. Sidlauskas, M. McGee, A. Summers, and M. Burns for insightful discussions about fish morphology and digitization protocols. M. Venzon and T. Claverie provided unpublished figures that assisted this study. K. Staab and T. Kane allowed `r fish_reliability %>% filter(role == "student") %>% distinct(sha1mac) %>% nrow()` undergraduate students to beta test the methods. This work was supported by an Encyclopedia of Life David M. Rubenstein Fellowship (EOL-33066-13), a Stephen and Ruth Wainwright Fellowship, and a UCLA Research and Conference Award to JC. Travel support to present this research was provided by the Society for Study of Evolution.
 
-## Author contributions
+# Data Accessibility
+
+All data are deposited online at the Encyclopedia of Life and Dryad.
+
+# Author contributions
 
 Conceived and designed the experiments: JC MEA. Performed the experiments: JC. Analyzed the data: JC. Contributed reagents/materials/analysis tools: JC MEA. Wrote the paper: JC MEA.
 
 
-## Supplementary material
-
-<!-- reset figure numbering for supplement -->
-
-\renewcommand\thefigure{S\arabic{figure}}
-\setcounter{figure}{0}
-
-```{r}
-knitr::opts_chunk$set(fig.cur=1)
-```
-
-Below is an example JSON file that demonstrates the utility of our web app:
-
-```json
-{
-    "C": {
-        "kind": "point",
-        "help": "Click the center of the eye."
-    },
-    "D": {
-        "kind": "line",
-        "help": "Click and drag from the left edge of the eye
-                 to the right edge of the eye."
-    },
-    "O": {
-        "kind": "curve",
-        "help": "Click and drag over the outline of the eye,
-                 starting from the leftmost point of the eye."
-    }
-}
-```
-
-Each digitization task to be completed is given a short abbreviation to aid task identification ("C" for center, "D" for diameter, and "O" for outline), and the type of task, "point", "line" or "curve", for homologous landmarks, linear measurements, and sliding semilandmarks can be specified. There is also an optional short help snippet displayed inline, which serve as a brief reminder for each landmark and complements a larger and more detailed protocol document that workers are required to read before beginning work.
-
-![A screenshot of the web app that turkers used to digitize images. A live demonstration is available at <https://jonchang.github.io/eol-mturk-landmark/>](interface.png)
-
-
-```{r turker_morph_procrustes_other_pc23, message=FALSE, warning=FALSE, fig.cap="PC2 and PC3 for turker / morphologist Procrustes space"}
-coords_df <- pca_df(coords)
-plot_tangent_space(coords_df, "PC2", "PC3")
-```
-
-```{r turker_morph_procrustes_other_pc34, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
-plot_tangent_space(coords_df, "PC3", "PC4")
-```
-
-```{r turker_morph_procrustes_other_pc45, message=FALSE, warning=FALSE, fig.cap="PC4 and PC5 for turker / morphologist Procrustes space"}
-plot_tangent_space(coords_df, "PC4", "PC5")
-```
-
-<!-- spit out all figures before references -->
-\clearpage
-
 # References
 
-```{r knitcitations_write, message=FALSE}
+```{r knitcitations_write, cache=FALSE, message=FALSE}
 write.bibtex(file="knitcitations.bib")
 # Also download Mendeley bibliography
 mendbib <- RCurl::getURL("https://www.dropbox.com/s/ehwm3c945k7rh0n/library.bib?dl=1", .opts=RCurl::curlOptions(followlocation=TRUE), ssl.verifypeer = FALSE)
 cat(mendbib, file="library.bib")
 ```
+
 

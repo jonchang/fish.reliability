@@ -21,7 +21,6 @@ mad_2d <- function(x, y, constant = 1.4826) {
 #' @param y a numeric vector
 #' @param group a vector that specifies how \code{x} and \code{y} should be grouped
 #' @export
-#' @import dplyr
 #' @importFrom stats median dist
 dist_2d <- function(x, y, group) {
   if (length(x) != length(y))

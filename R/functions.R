@@ -20,12 +20,21 @@ ip.lda <- function(object, newdata) {
 
 #' Formats a data frame for \code{\link[geomorph]{gpagen}}
 #'
-#' @param df a data frame, with certain columns
+#' @param df a data frame. must include columns "x" and "y"
+#' @param ... columns to include as labels
+#' @param .dots used to work around nonstandard evaluation
 #' @return A 3D matrix
-#' @import dplyr
 #' @export
-format_for_gpagen <- function(df) {
-  splut <- tidyr::gather(df, variable, val, x:y) %>% tidyr::unite(col=id, family, role, sha1mac)
+format_for_gpagen <- function(df, ...) {
+  format_for_gpagen_(df, .dots = lazyeval::lazy_dots(...))
+}
+
+
+#' @export
+#' @rdname format_for_gpagen
+format_for_gpagen_ <- function(df, ..., .dots) {
+  dots <- lazyeval::all_dots(.dots, ..., all_named = TRUE)
+  splut <- tidyr::gather(df, variable, val, x:y) %>% tidyr::unite_("id", names(dots))
   xtabs(val ~ mark + variable + id, data=splut)
 }
 
@@ -58,7 +67,9 @@ my.procD.lm <- function (f1, iter = 999, RRPP = FALSE, int.first = FALSE, verbos
   SS.obs <- anova.parts.obs$SS[1:k]
   P[, , 1] <- SS.obs
   method <- ifelse(RRPP, "RRPP", "resample")
-  result <- simplify2array(parallel::mclapply(1:iter, function(x) geomorph:::SS.random(Y, Xs, SS.obs, Yalt=method)$SS, mc.cores=parallel::detectCores()))
+  cl <- parallel::makeCluster(parallel::detectCores(), "PSOCK")
+  result <- simplify2array(parallel::parLapply(cl, 1:iter, function(x) geomorph:::SS.random(Y, Xs, SS.obs, Yalt=method)$SS))
+  parallel::stopCluster(cl)
   P[, , 1:iter+1] <- result
   P.val <- geomorph:::Pval.matrix(P)
   Z <- geomorph:::Effect.size.matrix(P)
@@ -76,3 +87,38 @@ my.procD.lm <- function (f1, iter = 999, RRPP = FALSE, int.first = FALSE, verbos
   }
   else anova.tab
 }
+
+#' Gets the GPA and also vectors of labels
+#' @export
+gpa_with_vectors <- function(df, ...) {
+  fmted <- format_for_gpagen_(df, .dots = lazyeval::lazy_dots(...))
+  gpaed <- gpagen(fmted, ShowPlot = FALSE)
+
+  ald <- str_split(dimnames(fmted)$id, fixed("_")) %>%
+    lapply(function(x) data.frame(t(x))) %>% bind_rows %>%
+    set_colnames(lazyeval::lazy_dots(...) %>% lapply(`[[`, "expr") %>% as.character)
+  list(coords = gpaed$coords, vectors = ald)
+}
+
+
+#' Gets replicate error
+#' @export
+get_replicate_error <- function (df) {
+  fmted <- format_for_gpagen(df, family, role, sha1mac, sequence)
+  gpaed <- gpagen(fmted, ShowPlot = FALSE)
+
+  ald <- str_split(dimnames(fmted)$id, fixed("_")) %>%
+    lapply(function(x) data.frame(t(x))) %>% bind_rows %>%
+    set_colnames(c("family", "role", "individual", "sequence")) %>%
+    group_by(family, individual) %>% mutate(sequence = row_number(individual))
+
+  fam <- ald$family
+  role <- ald$role
+  individual <- ald$individual
+  sequence <- ald$sequence
+
+  full_model <- procD.lm(gpaed$coords ~ fam * individual * ald$sequence, iter = 1)
+
+  ((full_model$MS[1] - full_model$MS[7])/5) / (full_model$MS[7] + ((full_model$MS[1] - full_model$MS[7])/5))
+}
+

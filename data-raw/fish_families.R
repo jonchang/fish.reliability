@@ -24,4 +24,4 @@ fish_families <- rowwise(results) %>% do(get_marks(.$Answer.marks, worker=hmac(s
 
 write_csv(fish_families, path = "fish_families.csv")
 
-use_data(fish_families, overwrite = TRUE)
+use_data(fish_families, overwrite = TRUE, compress = "xz")

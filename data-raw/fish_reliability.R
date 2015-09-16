@@ -61,4 +61,4 @@ fish_reliability <- hugedata %>% select(workerId) %>% distinct(workerId) %>% row
 
 write_csv(fish_reliability, path = "fish_reliability.csv")
 
-use_data(fish_reliability, overwrite = TRUE)
+use_data(fish_reliability, overwrite = TRUE, compress="xz")
