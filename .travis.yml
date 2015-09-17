@@ -18,7 +18,6 @@ r_binary_packages:
     - vegan
     - lubridate
     - directlabels
-    - BAMMtools
     - knitcitations
     - ggplot2
     - stringr
