@@ -1,0 +1,143 @@
+---
+title: Supplementary material for "Crowdsourced geometric morphometrics enable rapid large-scale collection and
+  analysis of phenotypic data"
+author:
+- affiliation: ucla
+  email: jonathan.chang\@ucla.edu
+  footnote: Author for correspondence jonathan.chang\@ucla.edu
+  name: Jonathan Chang
+- affiliation: ucla
+  name: Michael E. Alfaro
+bibliography:
+- library.bib
+- knitcitations.bib
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 5
+    fig_width: 7
+    keep_tex: yes
+    latex_engine: xelatex
+    template: inc/mstemplate.tex
+  html_document:
+    toc: yes
+  word_document: default
+documentclass: inc/msarticle
+endfloat: yes
+fontsize: 11pt
+geometry: margin=1.2in
+layout: preprint
+lineno: no
+linestretch: 2
+csl: inc/methods-in-ecology-and-evolution.csl
+address:
+- address: |
+    Department of Ecology and Evolutionary Biology, University of California, Los Angeles, CA, USA
+  code: ucla
+---
+
+```{r prelude, echo=FALSE, message=FALSE, warning=FALSE}
+library("MASS")
+library("readr")
+library("dplyr")
+library("ggplot2")
+library("stringr")
+library("magrittr")
+library("tidyr")
+library("reshape2")
+library("scales")
+library("geomorph")
+library("rjson")
+library("ipred")
+library("vegan")
+library("lubridate")
+library("directlabels")
+library("BAMMtools")
+library("knitr")
+library("kfigr")
+library("knitcitations")
+library("parallel")
+library("fish.reliability")
+options("citation_format"="pandoc")
+cleanbib()
+set.seed(111) # reproducible and stable sampling
+data(fish_reliability)
+data(fish_families)
+knitr::opts_chunk$set(echo=FALSE, cache=1, fig.align="center")
+```
+
+# Supplementary material
+
+<!-- reset figure numbering for supplement -->
+
+\renewcommand\thefigure{S\arabic{figure}}
+\setcounter{figure}{0}
+
+```{r}
+knitr::opts_chunk$set(fig.cur=1)
+```
+
+Below is an example JSON file that demonstrates the utility of our web app:
+
+```json
+{
+    "C": {
+        "kind": "point",
+        "help": "Click the center of the eye."
+    },
+    "D": {
+        "kind": "line",
+        "help": "Click and drag from the left edge of the eye
+                 to the right edge of the eye."
+    },
+    "O": {
+        "kind": "curve",
+        "help": "Click and drag over the outline of the eye,
+                 starting from the leftmost point of the eye."
+    }
+}
+```
+
+Each digitization task to be completed is given a short abbreviation to aid task identification ("C" for center, "D" for diameter, and "O" for outline), and the type of task, "point", "line" or "curve", for homologous landmarks, linear measurements, and sliding semilandmarks can be specified. There is also an optional short help snippet displayed inline, which serve as a brief reminder for each landmark and complements a larger and more detailed protocol document that workers are required to read before beginning work.
+
+![A screenshot of the web app that turkers used to digitize images. A live demonstration is available at <https://jonchang.github.io/eol-mturk-landmark/>](interface.png)
+
+![Landmarks (J1) rostral tip of premaxilla (J2) ventral tip of premaxilla (J3) rostral tip of dentary (E1) anterior margin of midline through eye (E2) posterior margin of midline through eye (O1) dorsal end of preopercle (O2) ventral elbow of preopercle (O3) anterior end of preopercle (O4) dorsal end of opercle (O5) posterior end of opercle (D1) anterior insertion of dorsal fin (D2) distal tip of the anterior dorsal fin ray (D3) distal tip of the posterior dorsal fin ray (D4) posterior insertion of dorsal fin (P1) dorsal insertion of pectoral fin (P2) distal tip of the dorsal pectoral fin ray (P3) distal tip of the ventral pectoral fin ray (P4) ventral insertion of anal fin (A1) anterior insertion of anal fin (A2) distal tip of the anterior anal fin ray (A3) distal tip of the posterior anal fin ray (A4) posterior insertion of anal fin (C1) dorsal insertion of the caudal fin (C2) distal tip of the dorsal caudal fin ray (C3) distal tip of the the ventral caudal fin ray (C4) ventral insertion of the caudal fin (C5) midpoint of the caudal margin of the caudal peduncle](landmark_figure/landmarks.pdf)
+
+
+```{r labeled_turker_v_morph, fig.cap="Version of Figure 1 where points are annotated with the landmark label.", warning=F, message=F}
+no_st <- fish_reliability %>% filter(role != "student") %>% mutate(role = factor(role))
+
+accuracy <- no_st %>% group_by(family, mark) %>% summarise(median = dist_2d(x, y, role)) %>% group_by(family) %>% mutate(outlier=upper_outlier(median, extreme = 2))
+
+precision <- no_st %>% group_by(role, family, mark) %>% summarise(var = mad_2d(x, y)) %>% spread(role, var) %>% group_by(family, mark) %>% transmute(mad = log(turker / morphologist))
+
+
+full_family <- data_frame(
+  family=c("Aca", "Apo", "Bal", "Cha", "Gob", "Lab", "Pom", "Sco", "Tet"),
+  full_family=c("Acanthuridae", "Apogonidae", "Balistidae", "Chaetodontidae", "Gobiidae", "Labridae", "Pomacentridae", "Scorpaenidae", "Tetraodontidae")
+)
+
+all_stats <- left_join(accuracy, precision) %>% mutate(outlier_label = ifelse(outlier, as.character(mark), NA))
+
+ggplot(all_stats, aes(median, mad, color=outlier, label=mark)) + geom_text(size=2.5) + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance / expert variance ") + facet_wrap(~family) + scale_color_manual(values = c("black", "red")) + theme_bw() + theme(legend.position="none") + xlim(0, 230)
+```
+
+```{r turker_morph_procrustes_other_pc34, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
+turk_morph_pca <- read_csv("turk_morph_pca_for_supplement.csv")
+
+plot_tangent_space(turk_morph_pca, "PC3", "PC4")
+```
+
+```{r turker_morph_procrustes_other_pc56, message=FALSE, warning=FALSE, fig.cap="PC5 and PC6 for turker / morphologist Procrustes space", eval=FALSE}
+plot_tangent_space(turk_morph_pca, "PC5", "PC6")
+```
+
+```{r sevenfamily_extra_pc, message=FALSE, warning=FALSE, fig.cap = "PC3-6 for seven families of ray finned fishes."}
+pcaed <- read_csv("seven_family_pca_for_supplement.csv")
+plot_tangent_space2(pcaed, "PC3", "PC4")
+plot_tangent_space2(pcaed, "PC5", "PC6")
+```
+
+\clearpage
+
