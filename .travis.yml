@@ -9,29 +9,6 @@ r_github_packages:
     - rstudio/rmarkdown
     - hadley/readr
     - mkoohafkan/kfigr
-r_binary_packages:
-    - magrittr
-    - tidyr
-    - reshape2
-    - scales
-    - geomorph
-    - rjson
-    - ipred
-    - vegan
-    - lubridate
-    - directlabels
-    - BAMMtools
-    - knitcitations
-    - ggplot2
-    - stringr
-    - formatR
-    - highr
-    - markdown
-    - knitr
-    - yaml
-    - htmltools
-    - catools
-    - curl
 before_script:
 #    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
 #    - tar -xvf v2.3.0.tar.gz
