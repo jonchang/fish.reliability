@@ -294,7 +294,7 @@ df <- fish_reliability %>%
 df <- df %>% group_by(family, mark, role, sha1mac) %>% summarise(x=median(x), y=median(y))
 #df <- df %>% group_by(family, mark, role, sha1mac, sequence)
 
-coords <- gpagen(format_for_gpagen(df, family, role, sha1mac, sequence), ShowPlot=F)$coords
+coords <- gpagen(format_for_gpagen(df, family, role, sha1mac), ShowPlot=F)$coords
 
 #plot_tangent_space(pca_df(coords), "PC1", "PC2")
 #plot_tangent_space(pca_df(coords), "PC3", "PC4")
