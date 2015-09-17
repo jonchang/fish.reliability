@@ -302,9 +302,9 @@ coords <- gpagen(format_for_gpagen(df, family, role, sha1mac), ShowPlot=F)$coord
 # exclude D1 & D2 for triggers, O4 and O5 for puffers
 
 df <- df %>% filter(!(family == "Balistidae" & mark %in% c("D1", "D2")), !(family == "Tetraodontidae" & mark %in% c("O4", "O5")))
-coords <- gpagen(format_for_gpagen(df, family, role, sha1mac, sequence), ShowPlot=F)$coords
+coords <- gpagen(format_for_gpagen(df, family, role, sha1mac), ShowPlot=F)$coords
 
-turk_morph_pca <- pca_df(coords) %>% separate(id, c("family", "role", "ind", "seq"), sep = "_")
+turk_morph_pca <- pca_df(coords) %>% separate(id, c("family", "role", "ind"), sep = "_")
 
 write_csv(turk_morph_pca, "turk_morph_pca_for_supplement.csv")
 
