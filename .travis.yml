@@ -7,8 +7,6 @@ apt_packages:
     - pgf
 r_github_packages:
     - rstudio/rmarkdown
-    - hadley/readr
-    - mkoohafkan/kfigr
 r_binary_packages:
     - magrittr
     - tidyr
@@ -31,6 +29,11 @@ r_binary_packages:
     - yaml
     - htmltools
     - catools
+    - lazyeval
+    - maps
+    - animation
+    - plotrix
+    - xtable
     - curl
 before_script:
 #    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
