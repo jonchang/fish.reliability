@@ -16,7 +16,8 @@ Suggests:
     yaml,
     kfigr,
     knitcitations,
-    readr
+    readr,
+    BAMMtools
 Depends: R (>= 3.2.0)
 License: AGPL
 LazyData: true

@@ -34,6 +34,8 @@ r_binary_packages:
     - plotrix
     - xtable
     - curl
+r_packages:
+    - BAMMtools
 before_script:
 #    - curl -OL https://github.com/macroevolution/bamm/archive/v2.3.0.tar.gz
 #    - tar -xvf v2.3.0.tar.gz
