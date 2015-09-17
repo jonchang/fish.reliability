@@ -36,6 +36,8 @@
 ## Rmarkdown intermediate files
 manuscript_cache/*
 manuscript_files/*
+supplement_cache/*
+supplement_files/*
 
 ## Rmarkdown output files
 manuscript.docx
@@ -44,3 +46,7 @@ manuscript.pdf
 manuscript.tex
 tmp-*.tex
 *.bib
+supplement.docx
+supplement.html
+supplement.pdf
+supplement.tex
