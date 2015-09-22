@@ -33,6 +33,7 @@
 #'   \item{y}{the y-coordinate of this landmark}
 #'   \item{family}{the family that this specimen belonged to}
 #'   \item{tip}{the species digitized}
-#'   \item{time_taken}{the amount of time taken by this worker to digitize this image}
+#'   \item{time_taken}{the amount of time taken for a worker to submit this task}
+#'   \item{worker_time_spent}{the amount of time a worker actually took to digitize the image}
 #' }
 "fish_families"
