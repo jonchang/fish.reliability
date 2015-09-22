@@ -58,7 +58,7 @@ library("kfigr")
 library("knitcitations")
 library("parallel")
 library("fish.reliability")
-options("citation_format"="pandoc")
+options("citation_format"="pandoc", width=88)
 cleanbib()
 set.seed(111) # reproducible and stable sampling
 data(fish_reliability)
@@ -105,10 +105,19 @@ Each digitization task to be completed is given a short abbreviation to aid task
 
 ![A screenshot of the web app that turkers used to digitize images. A live demonstration is available at <https://jonchang.github.io/eol-mturk-landmark/>](interface.png)
 
+## Landmarks used
+
+The landmarks used are shown in Supplemental Figure S2. The image is redrawn from @Chakrabarty2005, which was itself redrawn from @Nelson1994.
+
+![Landmarks (J1) rostral tip of premaxilla (J2) ventral tip of premaxilla (J3) rostral tip of dentary (E1) anterior margin of midline through eye (E2) posterior margin of midline through eye (O1) dorsal end of preopercle (O2) ventral elbow of preopercle (O3) anterior end of preopercle (O4) dorsal end of opercle (O5) posterior end of opercle (D1) anterior insertion of dorsal fin (D2) distal tip of the anterior dorsal fin ray (D3) distal tip of the posterior dorsal fin ray (D4) posterior insertion of dorsal fin (P1) dorsal insertion of pectoral fin (P2) distal tip of the dorsal pectoral fin ray (P3) distal tip of the ventral pectoral fin ray (P4) ventral insertion of anal fin (A1) anterior insertion of anal fin (A2) distal tip of the anterior anal fin ray (A3) distal tip of the posterior anal fin ray (A4) posterior insertion of anal fin (C1) dorsal insertion of the caudal fin (C2) distal tip of the dorsal caudal fin ray (C3) distal tip of the the ventral caudal fin ray (C4) ventral insertion of the caudal fin (C5) midpoint of the caudal margin of the caudal peduncle.](landmark_figure/landmarks.pdf)
+
+
 
 ## Testing turker vs expert consistency
 
+
 ```{r geomorph_consistency, warning=FALSE}
+only_good_points <- fish_reliability %>% filter(role != "student", !mark %in% c("A3", "A4", "D3", "D4", "O1", "O2", "O3","O4","O5", "P3", "P4"))
 res <- gpa_with_vectors(only_good_points, family, role, sha1mac, sequence)
 
 family <- res$vectors$family
@@ -116,21 +125,25 @@ role <- res$vectors$role
 repno <- as.integer(res$vectors$sequence) %% 5
 sha1mac <- as.factor(res$vectors$sha1mac)
 
-devtools::install_version("geomorph", version = "2.1.6", local=F, quick=T, dependencies=F, upgrade_dependencies=F, keep_source=T)
-
-
-devtools::install("~/geomorph/", local=F, quick=T, dependencies=F, upgrade_dependencies=F, keep_source=T)
-
-lm_result <- advanced.procD.lm(res$coords ~ family*role*sha1mac, ~family*sha1mac, iter=9)
-?lm_p <- lm_result$P[2]
+lm_result <- advanced.procD.lm(res$coords ~ family*role*sha1mac, ~family*sha1mac, .parallel.cores = 24, .parallel.cluster = parallel::makeForkCluster(24))
+lm_p <- lm_result$P[2]
 lm_Z <- lm_result$Z[2]
 lm_F <- lm_result$F[2]
 rm(family, role, repno, sha1mac)
 ```
 
+We also used a non-parametric MANOVA with RRPP to determine whether turkers were less consistent among individual replicates as compared to experts. The non-parametric MANOVA with RRPP failed to detect a significant difference between turker and expert shapes ($p = `r lm_p`$, $Z = `r lm_Z`$, $F=`r lm_F`$). 
 
 
-![Landmarks (J1) rostral tip of premaxilla (J2) ventral tip of premaxilla (J3) rostral tip of dentary (E1) anterior margin of midline through eye (E2) posterior margin of midline through eye (O1) dorsal end of preopercle (O2) ventral elbow of preopercle (O3) anterior end of preopercle (O4) dorsal end of opercle (O5) posterior end of opercle (D1) anterior insertion of dorsal fin (D2) distal tip of the anterior dorsal fin ray (D3) distal tip of the posterior dorsal fin ray (D4) posterior insertion of dorsal fin (P1) dorsal insertion of pectoral fin (P2) distal tip of the dorsal pectoral fin ray (P3) distal tip of the ventral pectoral fin ray (P4) ventral insertion of anal fin (A1) anterior insertion of anal fin (A2) distal tip of the anterior anal fin ray (A3) distal tip of the posterior anal fin ray (A4) posterior insertion of anal fin (C1) dorsal insertion of the caudal fin (C2) distal tip of the dorsal caudal fin ray (C3) distal tip of the the ventral caudal fin ray (C4) ventral insertion of the caudal fin (C5) midpoint of the caudal margin of the caudal peduncle](landmark_figure/landmarks.pdf)
+## R information
+
+Information on the versions of R packages used to analyze this data.
+
+```{r session_info}
+devtools::session_info()
+```
+
+
 
 
 ```{r labeled_turker_v_morph, fig.cap="Version of Figure 1 where points are annotated with the landmark label.", warning=F, message=F}
@@ -174,4 +187,6 @@ plot_tangent_space2(pcaed, "PC5", "PC6")
 fish_families_urls <- read_csv("fish_families_urls.csv")
 knitr::kable(select(fish_families_urls, -eol_guid), caption='Families, species names, and links to the images hosted on Encyclopedia of Life for the section "Example: a phenomic pipeline for comparative phylogenetic analysis".')
 ```
+
+## References
 

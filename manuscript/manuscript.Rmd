@@ -39,7 +39,7 @@ word_count: 7000
 ---
 
 ```{r prelude, echo=FALSE, message=FALSE, warning=FALSE}
-?library("MASS")
+library("MASS")
 library("readr")
 library("dplyr")
 library("ggplot2")
