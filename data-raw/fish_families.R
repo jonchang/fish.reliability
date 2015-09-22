@@ -33,7 +33,7 @@ durations <- rowwise(results) %>% do(get_duration(.$Answer.logger, worker=hmac(s
 
 marks <- rowwise(results) %>% do(get_marks(.$Answer.marks, worker=hmac(secret, .$workerid, algo="sha1"), family=.$family, tip=.$tip, time_taken=.$time_taken))
 
-fish_families <- left_join(marks, durations)
+fish_families <- left_join(marks, durations) %>% ungroup
 
 write_csv(fish_families, path = "fish_families.csv")
 
