@@ -65,7 +65,7 @@ cleanbib()
 set.seed(111) # reproducible and stable sampling
 data(fish_reliability)
 data(fish_families)
-knitr::opts_chunk$set(echo=FALSE, cache=1, fig.align="center")
+knitr::opts_chunk$set(echo=FALSE, cache=1, fig.align="center", warning = FALSE)
 options(mc.cores = parallel::detectCores())
 ```
 
