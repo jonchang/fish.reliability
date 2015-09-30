@@ -37,3 +37,13 @@
 #'   \item{worker_time_spent}{the amount of time a worker actually took to digitize the image}
 #' }
 "fish_families"
+
+
+#' Phylogenies for 7 fish families
+#'
+#' A dataset containing landmarks for 147 species across 7 fish families.
+#'
+#' @format A named list consisting of 7 phylo objects
+#' @references Acanthuridae: Sorenson 2013, Balistoidae / Tetraodontidae: Santini 2013, Apogonidae, Chaetodontidae, Labridae: Cowman & Bellwood 2011. Scarinae (grafted into Labridae tree): Choat et al 2012. Pomacentridae: Frederich et al 2013
+"fish_phy"
+
