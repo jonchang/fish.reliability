@@ -126,3 +126,53 @@ plotColorRamp <- function(q) {
   axis(2, round(seq(0, max(y), length.out = 3), 0), las = 1, yaxs = "i", cex.axis = 1, tcl = NA, mgp = c(0, 0.25, 0))
 }
 
+
+#' Plot BAMM rate through time
+#' @param rtt Rate through tiem matrix
+#' @param shifts list of other rate through time matrices corresponding to certain nodes
+#' @param xlim vector of length 2, x limits of plot
+#' @param ylim vector of length 2, y limits of plot
+#' @param labels whether to plot axis labels
+#' @export
+plot_rtt <- function(rtt, shifts = list(), xlim = NULL, ylim = NULL, labels = TRUE) {
+  vartype <- if (rtt$type == "trait") "beta" else "lambda"
+  if (length(shifts) > 0) {
+    allshifts <- c(list(rtt), shifts)
+  } else {
+    allshifts <- list(rtt)
+  }
+  allshifts <- lapply(allshifts, function (x) {
+    x$avg <- apply(x[[vartype]], 2, median)
+    x$times <- rev(x$times)
+    x
+  })
+  xlim <- if (is.null(xlim)) c(0, max(sapply(allshifts, `[[`, "times"))) else xlim
+  ylim <- if (is.null(ylim)) range(sapply(allshifts, `[[`, "avg")) else ylim
+  plot.new()
+  plot.window(rev(xlim), ylim, log = "y")
+  axis(at = axTicks(1), side = 1, labels = axTicks(1))
+  axis(at = c(1e-4, 1e-3, 1e-2, 1e-1), side = 2, las = 2, labels = labels)
+  lines(allshifts[[1]]$times, allshifts[[1]]$avg)
+  if (length(shifts) > 0) {
+    lapply(2:length(allshifts), function (x) {
+      lines(allshifts[[x]]$times - min(allshifts[[x]]$times), allshifts[[x]]$avg, col="red", lwd=1.5)
+    })
+  }
+  return(invisible(NULL))
+}
+
+#' Plot horizontal or vertical text
+#' @param str string to plot
+#' @export
+htext <- function(str) {
+  plot.new()
+  text(0.5, 0.5, str, cex=1)
+}
+
+#' @export
+#' @rdname htext
+vtext <- function(str) {
+  plot.new()
+  text(0.5, 0.5, str, cex=1, srt=90)
+}
+

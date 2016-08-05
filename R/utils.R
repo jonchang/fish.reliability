@@ -84,3 +84,88 @@ make_sampling_file <- function(sampling, file="") {
   write.table(sampling$clade, file, append = TRUE, quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
   invisible(NULL)
 }
+
+
+#' Parallel version of BAMMtools getRateThroughTimeMatrix
+#'
+#' @param ... other parameters, see \link[BAMMtools]{getRateThroughTimeMatrix}
+#' @param mc.cores number of cores to initialize a cluster with
+#' @export
+par_get_rtt_matrix <- function(ephy, start.time=NULL, end.time=NULL, nslices=100, node=NULL, nodetype = 'include', mc.cores = getOption("mc.cores", 2L)) {
+
+  if (!'bammdata' %in% class(ephy)) {
+    stop("Object ephy must be of class 'bammdata'\n");
+  }
+  if (ephy$type == 'diversification') {
+    stop("'diversification' not supported")
+  }
+
+
+  if (is.null(node)) {
+    nodeset <- ephy$edge[,2];
+  } else if (!is.null(node) & nodetype == 'include') {
+    #nodeset <- getDesc(ephy, node)$desc_set;
+    nodeset <- unlist(sapply(node, function(x) getDesc(ephy, x)$desc_set))
+  } else if (!is.null(node) & nodetype == 'exclude') {
+    nodeset <- setdiff( ephy$edge[,2], unlist(sapply(node, function(x) getDesc(ephy, x)$desc_set)));
+  } else {
+    stop('error in getRateThroughTimeMatrix\n');
+  }
+
+  bt <- branching.times(as.phylo.bammdata(ephy));
+  maxpossible <- max(bt[as.character(intersect(nodeset, ephy$edge[,1]))]);
+
+  if (is.null(start.time)) {
+    start.time <- max(bt) - maxpossible;
+  }
+  if (is.null(end.time)) {
+    end.time <- max(bt);
+  }
+
+  decimals = function(x){
+    if(x%%1 != 0)	{
+      return(nchar(strsplit(as.character(x),".",fixed=TRUE)[[1]][[2]]));
+    }		else	{
+      return(10);
+    }
+  }
+
+  tvec <- seq(start.time, end.time, length.out= nslices);
+  tol = 1*10^-decimals(ephy$eventBranchSegs[[1]][1,2]);
+  mm <- matrix(NA, nrow=length(ephy$eventBranchSegs), ncol=length(tvec));
+
+  # this is much faster than 'safeCompare'.
+  goodTime <- function (vec, val, tol) {
+    (vec[,2] - val <= tol) & (val - vec[,3] <= tol);
+  }
+
+  res <- mclapply(mc.cores = mc.cores, 1:length(ephy$eventBranchSegs), function(i) {
+    es <- ephy$eventBranchSegs[[i]];
+    events <- ephy$eventData[[i]];
+
+    isGoodNode <- rep(TRUE, nrow(es));
+
+    sapply(1:length(tvec), function(k) {
+      isGoodTime <- goodTime(es, tvec[k], tol=tol);
+      if (!(is.null(node))) { # only enter this if not the root. otherwise, only have to set once per i.
+        isGoodNode <- es[,1] %in% nodeset;
+      }
+
+      estemp <- es[isGoodTime & isGoodNode, ];
+      tvv <- tvec[k] - events$time[estemp[,4]];
+      rates <- exponentialRate(tvv, events$lam1[estemp[,4]], events$lam2[estemp[,4]]);
+      mean(rates);
+    })
+  })
+
+  mm <- do.call(rbind, res)
+
+  obj <- list();
+  obj$beta <- mm;
+  obj$times <- tvec;
+
+  class(obj) <- 'bamm-ratematrix';
+  obj$type = 'trait';
+  return(obj);
+}
+

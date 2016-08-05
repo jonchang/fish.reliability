@@ -105,35 +105,72 @@ Each digitization task to be completed is given a short abbreviation to aid task
 
 ![A screenshot of the web app that turkers used to digitize images. A live demonstration is available at <https://jonchang.github.io/eol-mturk-landmark/>](interface.png)
 
+##
+
+```{r fish_images}
+read_csv("fish_reliability_images.csv") %>% select(Family, Species, Author, Rights, TL, px) %>% knitr::kable(caption = "Images digitized by turkers and experts to compare their performance. TL = total length of the specimen, in cm. PX = The total length of the specimen, in number of image pixels.")
+```
+
+```{r fish_images_urls}
+read_csv("fish_reliability_images.csv") %>% select(Family, URL) %>% knitr::kable(caption = "Online URLs of images from Supplemental Table S1")
+```
+
 ## Landmarks used
 
 The landmarks used are shown in Supplemental Figure S2. The image is redrawn from @Chakrabarty2005, which was itself redrawn from @Nelson1994.
 
-![Landmarks (J1) rostral tip of premaxilla (J2) ventral tip of premaxilla (J3) rostral tip of dentary (E1) anterior margin of midline through eye (E2) posterior margin of midline through eye (O1) dorsal end of preopercle (O2) ventral elbow of preopercle (O3) anterior end of preopercle (O4) dorsal end of opercle (O5) posterior end of opercle (D1) anterior insertion of dorsal fin (D2) distal tip of the anterior dorsal fin ray (D3) distal tip of the posterior dorsal fin ray (D4) posterior insertion of dorsal fin (P1) dorsal insertion of pectoral fin (P2) distal tip of the dorsal pectoral fin ray (P3) distal tip of the ventral pectoral fin ray (P4) ventral insertion of anal fin (A1) anterior insertion of anal fin (A2) distal tip of the anterior anal fin ray (A3) distal tip of the posterior anal fin ray (A4) posterior insertion of anal fin (C1) dorsal insertion of the caudal fin (C2) distal tip of the dorsal caudal fin ray (C3) distal tip of the the ventral caudal fin ray (C4) ventral insertion of the caudal fin (C5) midpoint of the caudal margin of the caudal peduncle.](landmark_figure/landmarks.pdf)
+![Description of landmarks used to digitize fish body shape. (J1) rostral tip of premaxilla (J2) ventral tip of premaxilla (J3) rostral tip of dentary (E1) anterior margin of midline through eye (E2) posterior margin of midline through eye (O1) dorsal end of preopercle (O2) ventral elbow of preopercle (O3) anterior end of preopercle (O4) dorsal end of opercle (O5) posterior end of opercle (D1) anterior insertion of dorsal fin (D2) distal tip of the anterior dorsal fin ray (D3) distal tip of the posterior dorsal fin ray (D4) posterior insertion of dorsal fin (P1) dorsal insertion of pectoral fin (P2) distal tip of the dorsal pectoral fin ray (P3) distal tip of the ventral pectoral fin ray (P4) ventral insertion of anal fin (A1) anterior insertion of anal fin (A2) distal tip of the anterior anal fin ray (A3) distal tip of the posterior anal fin ray (A4) posterior insertion of anal fin (C1) dorsal insertion of the caudal fin (C2) distal tip of the dorsal caudal fin ray (C3) distal tip of the the ventral caudal fin ray (C4) ventral insertion of the caudal fin (C5) midpoint of the caudal margin of the caudal peduncle.](landmark_figure/landmarks.pdf)
 
 
 
 ## Testing turker vs expert consistency
 
-
-```{r geomorph_consistency, warning=FALSE}
+```{r geomorph_variance, warning=FALSE}
 only_good_points <- fish_reliability %>% filter(role != "student", !mark %in% c("A3", "A4", "D3", "D4", "O1", "O2", "O3","O4","O5", "P3", "P4"))
-res <- gpa_with_vectors(only_good_points, family, role, sha1mac, sequence)
+
+consist <- only_good_points %>% mutate(role = ifelse(role == "morphologist", "expert", role)) %>% group_by(family, role) %>% do(
+  (function(df) {
+    res <- gpa_with_vectors(df, family, role, sha1mac, sequence)
+    consistency <- morphol.disparity(res$coords, factor(res$vectors$sha1mac), iter=1)$Disp.obs[, 1]
+    fv <- structure(fivenum(consistency) * 10^6, .Names = c("minimum", "1st quartile", "median", "3rd quartile", "maximum"))
+    as.data.frame(t(fv))
+  })(.)
+)
+
+consist %>% knitr::kable(digits = 0, caption = "Five number summaries of turker and expert consistency. The summary statistics are multiplied by 1,000,000 to facilitate comparisons.")
+
+morph_better <- (consist %>% group_by(family) %>% select(role, median) %>% spread(role, median) %>% transmute(morph_better = expert < turker))$morph_better
+```
+
+## Do turkers improve with experience?
+
+```{r geomorph_lm, warning=FALSE}
+res <- gpa_with_vectors(filter(only_good_points, sequence > 2), family, role, sha1mac)
 
 family <- res$vectors$family
 role <- res$vectors$role
-repno <- as.integer(res$vectors$sequence) %% 5
-sha1mac <- as.factor(res$vectors$sha1mac)
 
-lm_result <- advanced.procD.lm(res$coords ~ family*role*sha1mac, ~family*sha1mac, .parallel.cores = 24, .parallel.cluster = parallel::makeForkCluster(24))
-lm_p <- lm_result$P[2]
-lm_Z <- lm_result$Z[2]
-lm_F <- lm_result$F[2]
-rm(family, role, repno, sha1mac)
+result_no_seq0 <- advanced.procD.lm(res$coords ~ family * role, ~ family, groups = ~family + role, .parallel.cores = 24, iter=1)
+
+res <- gpa_with_vectors(only_good_points, family, role, sha1mac)
+
+family <- res$vectors$family
+role <- res$vectors$role
+
+result_with_seq0 <- advanced.procD.lm(res$coords ~ family * role, ~ family, groups = ~family + role, .parallel.cores = 24, iter=1)
+
+allX <- seq(1, 17, by=2)
+
+fams <- c("Acanthuridae","Apogonoidae","Balistidae","Chaetodontidae","Gobiidae","Labridae","Pomacanthidae","Scorpaenidae","Tetraodontidae")
+
+seq0 <- unlist(lapply(allX, function(ii) (result_with_seq0$Means.dist)[ii, ii+1, drop=FALSE]))
+no_seq0 <- unlist(lapply(allX, function(ii) (result_no_seq0$Means.dist)[ii, ii+1, drop=FALSE]))
+
+tabs <- data_frame(`Family` = fams, `Procrustes distance: full dataset` = seq0, `Reduced dataset` = no_seq0, `Ratio` = seq0 / no_seq0)
+
+tabs %>% knitr::kable(digits = 5, caption = "Comparison of the Procrustes distance between the mean turker shape and the mean expert shape, for a full dataset, and a dataset excluding the first three images that turkers worked on. The ratio is computed by dividing the full dataset's distance by the reduced dataset's distance, in order to compare the relative distance change among the different images digitized.")
+
 ```
-
-We also used a non-parametric MANOVA with RRPP to determine whether turkers were less consistent among individual replicates as compared to experts. The non-parametric MANOVA with RRPP failed to detect a significant difference between turker and expert shapes ($p = `r lm_p`$, $Z = `r lm_Z`$, $F=`r lm_F`$). 
-
 
 ## R information
 
@@ -164,7 +201,7 @@ all_stats <- left_join(accuracy, precision) %>% mutate(outlier_label = ifelse(ou
 ggplot(all_stats, aes(median, mad, color=outlier, label=mark)) + geom_text(size=2.5) + labs(x="Accuracy: median turker - median expert", y="Precision: log turker variance / expert variance ") + facet_wrap(~family) + scale_color_manual(values = c("black", "red")) + theme_bw() + theme(legend.position="none") + xlim(0, 230)
 ```
 
-```{r turker_morph_procrustes_other_pc34, message=FALSE, warning=FALSE, fig.cap="PC3 and PC4 for turker / morphologist Procrustes space"}
+```{r turker_morph_procrustes_other_pc34, message=FALSE, warning=FALSE, fig.cap="Morphospace projection of PC3 and PC4 for each observer's mean shape. Blue points indicate experts, while red points indicate turkers. The mean shape for all turkers and experts for a given family is the point outlined in black for each family, and connected with a black line to help emphasize the difference between turker and expert mean shapes. The convex hull for each family is drawn to show the amount of among-observer shape variation. PC 1 and 2 are shown in Fig 2."}
 turk_morph_pca <- read_csv("turk_morph_pca_for_supplement.csv")
 
 plot_tangent_space(turk_morph_pca, "PC3", "PC4")
@@ -174,18 +211,104 @@ plot_tangent_space(turk_morph_pca, "PC3", "PC4")
 plot_tangent_space(turk_morph_pca, "PC5", "PC6")
 ```
 
-```{r sevenfamily_extra_pc, message=FALSE, warning=FALSE, fig.cap = "PC3-6 for seven families of ray finned fishes."}
+```{r sevenfamily_extra_pc, message=FALSE, warning=FALSE, fig.cap = "Morphospace of PC3 and PC4 for seven families of ray-finned fishes. Each point indicates a separate species; families are separated by colors. The convex hull for each family is drawn to show area of morphospace occupied by each family. The other PC axes are shown in Figs 4 and S6."}
 pcaed <- read_csv("seven_family_pca_for_supplement.csv")
 plot_tangent_space2(pcaed, "PC3", "PC4")
+```
+
+```{r sevenfamily_extra_pc2, message=FALSE, warning=FALSE, fig.cap = "Morphospace of PC5 and PC6 for seven families of ray-finned fishes. Each point indicates a separate species; families are separated by colors. The convex hull for each family is drawn to show area of morphospace occupied by each family. The other PC axes are shown in Figs 4 and S5."}
 plot_tangent_space2(pcaed, "PC5", "PC6")
 ```
+
+
+```{r load_bamm_data, message=FALSE, echo=FALSE, warning=FALSE, results="hide"}
+#base <- "data-raw/bamm/"
+base <- "../data-raw/bamm/"
+fams <- c("acanthurid", "apogonidae", "chaetodontidae")
+pretty_names <- c("Acanthuridae", "Apogonidae", "Chaetodontidae")
+names(fams) <- pretty_names
+
+tre_trait <- fish_phy[pretty_names]
+names(tre_trait) <- fams
+
+cl <- makePSOCKcluster(detectCores(), useXDR=F)
+clusterExport(cl, list("base", "fams", "tre_trait"))
+evt_trait <- parLapplyLB(cl, fams, function(fam) {
+  tre <- tre_trait[[fam]]
+  BAMMtools::getEventData(tre, paste0(base, "trait_runs/", fam, "_PC1_event_data.txt"), burnin=0.1, type="trait")
+})
+names(evt_trait) <- fams
+clusterExport(cl, list("evt_trait"))
+rtt_trait <- parLapplyLB(cl, fams, function(fam) {
+  BAMMtools::getRateThroughTimeMatrix(evt_trait[[fam]])
+})
+prior_trait <- parLapplyLB(cl, fams, function(fam) {
+  BAMMtools::getBranchShiftPriors(tre_trait[[fam]], paste0(base, "trait_runs/", fam, "_PC1_prior_probs.txt"))
+})
+
+names(pretty_names) <- names(prior_trait) <- names(rtt_trait) <- fams
+stopCluster(cl)
+```
+
+```{r bamm_plots, message=FALSE, echo=FALSE, warning=FALSE, results="hide", fig.show="hold", anchor="figure", fig.cap="Rates of shape evolution for PC1 across three families of fishes. (a) Phylorate plots color branch lengths by rates of shape evolution, where warmer colors indicate faster rates of evolution. No significant rate shift events were detected within these families. (b) Median log rates of shape evolution through time. Analysis for the other four families are available in the main text, Figure 5.", fig.width = 6, fig.height = 3, out.height="3in", out.width="6in"}
+
+customintervals <- list(
+  pomacentridae = c(0.000, 0.0025)
+)
+
+mar <- c(1.5,1,0,0)+0.1
+par(mar = c(0,0,0,0))
+
+layout_mat <- matrix(c(
+  4, 6, 8, 10, # shape phylorates
+  5, 7, 9, 11, # shape rate through time
+  0, 1, 2, 3
+), nrow = 3, byrow = TRUE)
+
+layout(layout_mat, widths = c(1.3, 12, 9, 9, 9, 9, 9, 9), heights = c(5, 6, 1))
+lapply(pretty_names, htext) # family names
+vtext("(a) Shape Phylorates")
+vtext("(b) Shape Rate Through Time")
+par(mar = mar)
+
+ctr <- 1
+lapply(fams, function(fam) {
+  par(mar=mar)
+  if (ctr == 1) {
+    par(mar=c(1.5,4,0,0)+0.1)
+  }
+  interval <- if(is.null(customintervals[[fam]])) c(0, 0.001) else customintervals[[fam]] 
+  q <- plot.bammdata(evt_trait[[fam]], logcolor = F, breaksmethod = "jenks", color.interval = interval)
+  tips <- unique(filter(fish_families, family == fam)$tip)
+  best <- getBestShiftConfiguration(evt_trait[[fam]], prior = prior_trait[[fam]])
+  tiplabels(tip = which(tre_trait[[fam]]$tip.label %in% tips), pch = 21, cex = 0.5, bg = "black", frame = "none")
+  addBAMMshifts(best, cex = 1.5, par.reset=F)
+  #axis_phylo(label_ticks = FALSE)
+  axisPhylo(col.axis = "transparent")
+  shift_node <- getShiftNodesFromIndex(best, 1)
+  if (length(shift_node) > 0) {
+    background_rates <- par_get_rtt_matrix(evt_trait[[fam]], node = shift_node, nodetype = "exclude", start.time=0)
+    clade_rates <- lapply(shift_node, function (x) {
+      phy <- extract.clade(tre_trait[[fam]], x)
+      write.tree(phy, file = paste0(fam, "_trait_shift_", x, ".tre"))
+      par_get_rtt_matrix(evt_trait[[fam]], node = x)
+      })
+    plot_rtt(background_rates, clade_rates, ylim=c(4e-5, 0.1), labels = ctr == 1)
+  } else {
+    plot_rtt(rtt_trait[[fam]], ylim=c(4e-5, 0.1), labels = ctr == 1)
+  }
+  ctr <<- ctr + 1
+})
+
+```
+
 
 \clearpage
 
 
 ```{r fish_families_table, message=FALSE, warning=FALSE, as.is=T}
 fish_families_urls <- read_csv("fish_families_urls.csv")
-knitr::kable(select(fish_families_urls, -eol_guid), caption='Families, species names, and links to the images hosted on Encyclopedia of Life for the section "Example: a phenomic pipeline for comparative phylogenetic analysis".')
+knitr::kable(select(fish_families_urls, -eol_guid), caption='Families, species names, and URLs of the images hosted on Encyclopedia of Life for the section "Example: a phenomic pipeline for comparative phylogenetic analysis".')
 ```
 
 ## References
